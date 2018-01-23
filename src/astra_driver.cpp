@@ -39,6 +39,7 @@
 #include <sys/shm.h>  
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/distortion_models.h>
+#include <std_msgs/Float32.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp>
@@ -55,6 +56,7 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
     data_skip_ir_counter_(0),
     data_skip_color_counter_(0),
     data_skip_depth_counter_ (0),
+    data_skip_temperature_counter_ (-1),
     ir_subscribers_(false),
     color_subscribers_(false),
     depth_subscribers_(false),
@@ -207,6 +209,7 @@ void AstraDriver::advertiseROSTopics()
 
   get_serial_server = nh_.advertiseService("get_serial", &AstraDriver::getSerialCb,this);
 
+  pub_temperature_ = nh_.advertise<std_msgs::Float32>("temperature", 1, true);
 }
 
 bool AstraDriver::getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res) {
@@ -260,6 +263,7 @@ void AstraDriver::configCb(Config &config, uint32_t level)
   use_device_time_ = config.use_device_time;
 
   data_skip_ = config.data_skip+1;
+  data_skip_temperature_ = 30 / data_skip_;
 
   applyConfigToOpenNIDevice();
 
@@ -544,10 +548,21 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
         sensor_msgs::ImageConstPtr floating_point_image = rawToFloatingPointConversion(image);
         pub_depth_.publish(floating_point_image, cam_info);
       }
+    }
+  }
 
-      float temp = 0.0;
-      device_->getTemperature(temp);
-      std::cout << "Temp: " << temp << std::endl;
+  // Periodic publishing of camera's temperature sensor reading.
+  // Only works for newer Orbbec cameras. For older ones, the value may be
+  // nonsensical and/or unstable.
+  if ((++data_skip_temperature_counter_)%data_skip_temperature_==0)
+  {
+    std_msgs::Float32 temperature;
+    device_->getTemperature(temperature.data);
+    pub_temperature_.publish(temperature);
+
+    // Also log temperature at 1 minute intervals
+    if ((data_skip_temperature_counter_) % (data_skip_temperature_ * 60) == 0) {
+      ROS_INFO("%s temperature: %.2f", nh_.getNamespace().c_str(), temperature.data);
     }
   }
 }

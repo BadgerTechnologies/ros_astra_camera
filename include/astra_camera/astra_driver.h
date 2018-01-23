@@ -128,6 +128,7 @@ private:
   image_transport::CameraPublisher pub_depth_raw_;
   image_transport::CameraPublisher pub_ir_;
   ros::Publisher pub_projector_info_;
+  ros::Publisher pub_temperature_;
 
   /** \brief Camera info manager objects. */
   boost::shared_ptr<camera_info_manager::CameraInfoManager> color_info_manager_, ir_info_manager_;
@@ -162,6 +163,8 @@ private:
   int data_skip_ir_counter_;
   int data_skip_color_counter_;
   int data_skip_depth_counter_;
+  int data_skip_temperature_counter_;
+  int data_skip_temperature_;
 
   bool auto_exposure_;
   bool auto_white_balance_;

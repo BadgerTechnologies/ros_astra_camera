@@ -132,6 +132,8 @@ public:
 
   void setUseDeviceTimer(bool enable);
 
+  bool getTemperature(float& temp);
+
 protected:
   void shutdown();
 

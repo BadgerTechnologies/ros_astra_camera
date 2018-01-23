@@ -31,6 +31,7 @@
  */
 
 #include "openni2/OpenNI.h"
+#include <openni2/Include/PS1080.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -91,6 +92,32 @@ AstraDevice::~AstraDevice()
   shutdown();
 
   openni_device_->close();
+}
+
+bool AstraDevice::getTemperature(float& temp)
+{
+
+  XnTecFastConvergenceData TecData;
+  float     SetPointTemperature;
+  float     MeasuredTemperature;
+  float     ErrorTemperature;
+
+  openni::Status rc = openni_device_->getProperty(XN_MODULE_PROPERTY_TEC_FAST_CONVERGENCE_STATUS, &TecData);
+  if (rc != openni::STATUS_OK)
+  {
+    printf("%s\n", openni::OpenNI::getExtendedError());
+  }
+  else
+  {
+    SetPointTemperature = TecData.m_SetPointTemperature;
+    /* calculate error in temperature */
+    ErrorTemperature = (float)TecData.m_SetPointTemperature - (float)TecData.m_MeasuredTemperature;
+
+    MeasuredTemperature = SetPointTemperature / 100;
+    temp = MeasuredTemperature;
+  }
+
+  return true;
 }
 
 const std::string AstraDevice::getUri() const

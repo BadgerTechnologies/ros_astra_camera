@@ -544,6 +544,10 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
         sensor_msgs::ImageConstPtr floating_point_image = rawToFloatingPointConversion(image);
         pub_depth_.publish(floating_point_image, cam_info);
       }
+
+      float temp = 0.0;
+      device_->getTemperature(temp);
+      std::cout << "Temp: " << temp << std::endl;
     }
   }
 }

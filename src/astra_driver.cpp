@@ -37,14 +37,14 @@
 #include <unistd.h>  
 #include <stdlib.h>  
 #include <stdio.h>  
-#include <sys/shm.h>  
+#include <sys/file.h>
+#include <fcntl.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/distortion_models.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp>
 
-#define  MULTI_ASTRA 1
 namespace astra_wrapper
 {
 
@@ -137,8 +137,33 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
 	 	initDevice();
 	 }
 #else
-  initDevice();
-
+  std::string lockFileName = "";
+  if (pnh.hasParam("lockfile"))
+  {
+      pnh.getParam("lockfile", lockFileName);
+  }
+  if (!lockFileName.empty())
+  {
+      int fd = open(lockFileName.c_str(), O_RDWR | O_CREAT, 0666);
+      if (fd < 0)
+      {
+          ROS_ERROR("Lock file \"%s\" could not be opened: %s", lockFileName.c_str(), strerror(errno));
+      }
+      if (flock(fd, LOCK_EX) < 0)
+      {
+          ROS_ERROR("Unable to lock file \"%s\": %s", lockFileName.c_str(), strerror(errno));
+      }
+      ROS_INFO("File locked for camera %s", device_id_.c_str());
+      initDevice();
+      if (flock(fd, LOCK_UN) < 0)
+      {
+          ROS_ERROR("Cannot unlock file \"%s\"!: %s", lockFileName.c_str(), strerror(errno));
+      }
+  }
+  else
+  {
+      initDevice();
+  }
 #endif
   // Initialize dynamic reconfigure
   reconfigure_server_.reset(new ReconfigureServer(pnh_));

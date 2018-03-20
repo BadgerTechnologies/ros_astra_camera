@@ -36,14 +36,14 @@
 #include <unistd.h>  
 #include <stdlib.h>  
 #include <stdio.h>  
-#include <sys/shm.h>  
+#include <sys/file.h>
+#include <fcntl.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/distortion_models.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp>
 
-#define  MULTI_ASTRA 1
 namespace astra_wrapper
 {
 
@@ -65,67 +65,34 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
 
   readConfigFromParameterServer();
 
-#if MULTI_ASTRA
-	int bootOrder, devnums;
-	pnh.getParam("bootorder", bootOrder);
-	pnh.getParam("devnums", devnums);
-	if( devnums>1 )
-	{
-		int shmid;
-		char *shm = NULL;
-		char *tmp;
-		if(  bootOrder==1 )
-		{
-			if( (shmid = shmget((key_t)0401, 1, 0666|IPC_CREAT)) == -1 )   
-			{ 
-				ROS_ERROR("Create Share Memory Error:%s", strerror(errno));
-			}
-			shm = (char *)shmat(shmid, 0, 0);  
-			*shm = 1;
-			initDevice();
-			ROS_WARN("*********** device_id %s already open device************************ ", device_id_.c_str());
-			*shm = 2;
-		}
-		else 	
-		{	
-			if( (shmid = shmget((key_t)0401, 1, 0666|IPC_CREAT)) == -1 )   
-			{ 
-			  	ROS_ERROR("Create Share Memory Error:%s", strerror(errno));
-			}
-			shm = (char *)shmat(shmid, 0, 0);
-			while( *shm!=bootOrder);
-			 initDevice();
-			 ROS_WARN("*********** device_id %s already open device************************ ", device_id_.c_str());
-			*shm = (bootOrder+1);
-		}
-		if(  bootOrder==devnums )
-		{
-//			while( *shm!=(devnums+1)) ;
-			if(shmdt(shm) == -1)  
-			{  
-				ROS_ERROR("shmdt failed\n");  
-			} 
-			if(shmctl(shmid, IPC_RMID, 0) == -1)  
-			{  
-				ROS_ERROR("shmctl(IPC_RMID) failed\n");  
-			}
-		 }
-		 else
-		 {
-		 	if(shmdt(shm) == -1)  
-			{  
-				ROS_ERROR("shmdt failed\n");  
-			} 
-		 }
-	 }
-	 else
-	 {
-	 	initDevice();
-	 }
-#else
-  initDevice();
+  std::string lockFileName = "";
+  if (pnh.hasParam("lockfile"))
+  {
+      pnh.getParam("lockfile", lockFileName);
+  }
+  if (!lockFileName.empty())
+  {
+      int fd = open(lockFileName.c_str(), O_RDWR | O_CREAT, 0666);
+      if (fd < 0)
+      {
+          ROS_ERROR("Lock file \"%s\" could not be opened: %s", lockFileName.c_str(), strerror(errno));
+      }
+      if (flock(fd, LOCK_EX) < 0)
+      {
+          ROS_ERROR("Unable to lock file \"%s\": %s", lockFileName.c_str(), strerror(errno));
+      }
+      ROS_INFO("File locked for camera %s", device_id_.c_str());
+      initDevice();
+      if (flock(fd, LOCK_UN) < 0)
+      {
+          ROS_ERROR("Cannot unlock file \"%s\"!: %s", lockFileName.c_str(), strerror(errno));
+      }
+  }
+  else
+  {
+      initDevice();
+  }
 
-#endif
   // Initialize dynamic reconfigure
   reconfigure_server_.reset(new ReconfigureServer(pnh_));
   reconfigure_server_->setCallback(boost::bind(&AstraDriver::configCb, this, _1, _2));

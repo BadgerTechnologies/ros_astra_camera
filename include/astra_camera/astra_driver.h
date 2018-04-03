@@ -208,6 +208,9 @@ private:
 
   bool use_device_time_;
 
+  bool disable_emitter_;
+  bool emitter_disabled_;
+
   Config old_config_;
   int uvc_flip_;
 };

@@ -31,6 +31,7 @@
  */
 
 #include "openni2/OpenNI.h"
+#include <openni2/PS1080.h>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -237,6 +238,19 @@ void AstraDevice::setIRFlood(bool enable)
     enable_ = 0;
   }
   openni_device_->setProperty(XN_MODULE_PROPERTY_IRFLOOD_STATE, enable_);
+}
+
+bool AstraDevice::setEmitterState(bool state) const
+{
+  OniBool bEmitterState = (state ? TRUE : FALSE);
+  openni::Status rc = openni_device_->setProperty(XN_MODULE_PROPERTY_EMITTER_STATE, (uint8_t*)&bEmitterState, sizeof(bEmitterState));
+
+  if (rc != openni::STATUS_OK)
+  {
+    return false;
+  }
+
+  return true;
 }
 
 float AstraDevice::getIRFocalLength(int output_y_resolution) const

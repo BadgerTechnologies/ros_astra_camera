@@ -46,6 +46,7 @@ include_directories(include
                     ${catkin_INCLUDE_DIRS}
                     ${Boost_INCLUDE_DIRS}
                     ${CMAKE_CURRENT_BINARY_DIR}/openni2/include
+                    ${CMAKE_CURRENT_BINARY_DIR}/openni2/Include
                     )
 
 

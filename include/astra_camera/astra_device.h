@@ -81,6 +81,8 @@ public:
 
   bool isValid() const;
 
+  bool setEmitterState(bool state) const;
+
   bool hasIRSensor() const;
   bool hasColorSensor() const;
   bool hasDepthSensor() const;

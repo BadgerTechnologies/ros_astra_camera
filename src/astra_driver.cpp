@@ -60,9 +60,10 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
     color_subscribers_(false),
     depth_subscribers_(false),
     depth_raw_subscribers_(false),
-    uvc_flip_(0)
-    disable_emitter_(false),
-    emitter_disabled_(false)
+    uvc_flip_(0),
+    set_emitter_disabled_(false),
+    ir_emitter_disabled_(false),
+    depth_emitter_disabled_(false)
 {
 
   genVideoModeTableMap();
@@ -346,14 +347,17 @@ void AstraDriver::configCb(Config &config, uint32_t level)
   if (config_init_ && old_config_.rgb_preferred != config.rgb_preferred)
     imageConnectCb();
 
-  if (disable_emitter_ != config.disable_emitter){
-    disable_emitter_ = config.disable_emitter;
+  if (set_emitter_disabled_ != config.disable_emitter){
+    set_emitter_disabled_ = config.disable_emitter;
 
-    // If there are active IR streams and emitter is currently disabled, enable
-    if (!disable_emitter_ && device_->isIRStreamStarted())
+    // If there are active IR/depth streams and the desired emitter state has changed from disabled to not disabled, emitter should be enabled
+    if (!set_emitter_disabled_ && (device_->isIRStreamStarted() || device_->isDepthStreamStarted()))
     {
-      device_->setEmitterState(true);
-      emitter_disabled_ = false;
+      if (device_->setEmitterState(true))
+      {
+        depth_emitter_disabled_ = false;
+        ir_emitter_disabled_ = false;
+      }
     }
   }
 
@@ -531,7 +535,8 @@ void AstraDriver::imageConnectCb()
     {
       ROS_INFO("Stopping IR stream.");
       device_->stopIRStream();
-      emitter_disabled_ = false;
+      ir_emitter_disabled_ = false;
+      depth_emitter_disabled_ = false;
     }
 
     if (!color_started)
@@ -573,7 +578,8 @@ void AstraDriver::imageConnectCb()
     {
       ROS_INFO("Stopping IR stream.");
       device_->stopIRStream();
-      emitter_disabled_ = false;
+      ir_emitter_disabled_ = false;
+      depth_emitter_disabled_ = false;
     }
   }
 }
@@ -599,15 +605,19 @@ void AstraDriver::depthConnectCb()
   {
     ROS_INFO("Stopping depth stream.");
     device_->stopDepthStream();
+    ir_emitter_disabled_ = false;
+    depth_emitter_disabled_ = false;
   }
 }
 
 void AstraDriver::newIRFrameCallback(sensor_msgs::ImagePtr image)
 {
-  if (disable_emitter_ && !emitter_disabled_)
+  if (set_emitter_disabled_ && !ir_emitter_disabled_)
   {
-    device_->setEmitterState(false);
-    emitter_disabled_ = true;
+    if(device_->setEmitterState(false))
+    {
+      ir_emitter_disabled_ = true;
+    }
   }
 
   if ((++data_skip_ir_counter_)%data_skip_==0)
@@ -642,6 +652,13 @@ void AstraDriver::newColorFrameCallback(sensor_msgs::ImagePtr image)
 
 void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
 {
+  if (set_emitter_disabled_ && !depth_emitter_disabled_)
+  {
+    if(device_->setEmitterState(false)){
+      depth_emitter_disabled_ = true;
+    }
+  }
+
   if ((++data_skip_depth_counter_)%data_skip_==0)
   {
 

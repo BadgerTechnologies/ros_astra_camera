@@ -1080,7 +1080,7 @@ std::string AstraDriver::resolveDeviceURI(const std::string& device_id)
 
     // everything else is treated as part of the device_URI
     bool match_found = false;
-    std::string matched_uri;
+    std::string matched_uri = "INVALID";
     for (size_t i = 0; i < available_device_URIs->size(); ++i)
     {
       std::string s = (*available_device_URIs)[i];
@@ -1124,9 +1124,8 @@ void AstraDriver::initDevice()
     {
       if (!device_)
       {
-        ROS_INFO("No matching device found.... waiting for devices. Reason: %s", exception.what());
-        boost::this_thread::sleep(boost::posix_time::seconds(3));
-        continue;
+        ROS_ERROR("No matching device found.... Reason: %s", exception.what());
+        throw;
       }
       else
       {

@@ -216,29 +216,68 @@ void AstraDriver::configCb(Config &config, uint32_t level)
   color_time_offset_ = ros::Duration(config.color_time_offset);
   depth_time_offset_ = ros::Duration(config.depth_time_offset);
 
-  if (lookupVideoModeFromDynConfig(config.ir_mode, ir_video_mode_)<0)
-  {
-    ROS_ERROR("Undefined IR video mode received from dynamic reconfigure");
-    exit(-1);
+  if (!config_init_ || (config.ir_mode != old_config_.ir_mode)){
+    if (lookupVideoModeFromDynConfig(config.ir_mode, ir_video_mode_)<0)
+    {
+      ROS_ERROR("Undefined IR video mode received from dynamic reconfigure");
+      exit(-1);
+    }
+    ir_video_mode_.pixel_format_ = PIXEL_FORMAT_GRAY16;
+
+    if (config_init_ && device_->isIRStreamStarted()){
+      device_->stopIRStream();
+    }
+
+    setIRVideoMode(ir_video_mode_);
+
+    // If ir stream was stopped, restart it
+    if (config_init_){
+      imageConnectCb();
+    }
   }
 
-  if (lookupVideoModeFromDynConfig(config.color_mode, color_video_mode_)<0)
-  {
-    ROS_ERROR("Undefined color video mode received from dynamic reconfigure");
-    exit(-1);
+  if (!config_init_ || (config.color_mode != old_config_.color_mode)){
+    if (lookupVideoModeFromDynConfig(config.color_mode, color_video_mode_)<0)
+    {
+      ROS_ERROR("Undefined color video mode received from dynamic reconfigure");
+      exit(-1);
+    }
+    color_video_mode_.pixel_format_ = PIXEL_FORMAT_RGB888;
+
+    // If color stream is active, shutdown before setting mode
+    if (config_init_ && device_->hasColorSensor() && device_->isColorStreamStarted()){
+      device_->stopColorStream();
+    }
+    setColorVideoMode(color_video_mode_);
+
+    // If color stream was stopped, restart it
+    if (config_init_){
+      imageConnectCb();
+    }
   }
 
-  if (lookupVideoModeFromDynConfig(config.depth_mode, depth_video_mode_)<0)
-  {
-    ROS_ERROR("Undefined depth video mode received from dynamic reconfigure");
-    exit(-1);
+  if (!config_init_ || (config.depth_mode != old_config_.depth_mode)){
+    if (lookupVideoModeFromDynConfig(config.depth_mode, depth_video_mode_)<0)
+    {
+      ROS_ERROR("Undefined depth video mode received from dynamic reconfigure");
+      exit(-1);
+    }
+
+    // assign pixel format
+    depth_video_mode_.pixel_format_ = PIXEL_FORMAT_DEPTH_1_MM;
+
+    // If depth stream is active, shutdown before setting mode
+    if (device_->isDepthStreamStarted() && config_init_){
+      device_->stopDepthStream();
+    }
+
+    setDepthVideoMode(depth_video_mode_);
+
+    // If depth stream was stopped, restart it
+    if (config_init_){
+      depthConnectCb();
+    }
   }
-
-  // assign pixel format
-
-  ir_video_mode_.pixel_format_ = PIXEL_FORMAT_GRAY16;
-  color_video_mode_.pixel_format_ = PIXEL_FORMAT_RGB888;
-  depth_video_mode_.pixel_format_ = PIXEL_FORMAT_DEPTH_1_MM;
 
   color_depth_synchronization_ = config.color_depth_synchronization;
   depth_registration_ = config.depth_registration;
@@ -307,13 +346,6 @@ void AstraDriver::applyConfigToOpenNIDevice()
   data_skip_ir_counter_ = 0;
   data_skip_color_counter_= 0;
   data_skip_depth_counter_ = 0;
-
-  setIRVideoMode(ir_video_mode_);
-  if (device_->hasColorSensor())
-  {
-  	setColorVideoMode(color_video_mode_);
-  }
-  setDepthVideoMode(depth_video_mode_);
 
   if (device_->isImageRegistrationModeSupported())
   {

@@ -283,6 +283,15 @@ void AstraDriver::configCb(Config &config, uint32_t level)
   depth_registration_ = config.depth_registration;
 
   auto_exposure_ = config.auto_exposure;
+
+  // If the manual exposure level changes, then set auto_exposure to false
+  if (manual_exposure_ != config.manual_exposure)
+  {
+    auto_exposure_ = false;
+    config.auto_exposure = false;
+    manual_exposure_ = config.manual_exposure;
+  }
+
   auto_white_balance_ = config.auto_white_balance;
 
   use_device_time_ = config.use_device_time;
@@ -294,6 +303,7 @@ void AstraDriver::configCb(Config &config, uint32_t level)
   config_init_ = true;
 
   old_config_ = config;
+
 }
 
 void AstraDriver::setIRVideoMode(const AstraVideoMode& ir_video_mode)
@@ -379,6 +389,18 @@ void AstraDriver::applyConfigToOpenNIDevice()
   {
     ROS_ERROR("Could not set auto exposure. Reason: %s", exception.what());
   }
+
+
+  try
+  {
+    if (config_init_ && (!auto_exposure_) && old_config_.manual_exposure != manual_exposure_)
+      device_->setManualExposure(manual_exposure_);
+  }
+  catch (const AstraException& exception)
+  {
+    ROS_ERROR("Could not set manual exposure. Reason: %s", exception.what());
+  }
+
 
   try
   {

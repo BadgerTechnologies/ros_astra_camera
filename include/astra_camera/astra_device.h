@@ -127,9 +127,11 @@ public:
   float getDepthFocalLength (int output_y_resolution) const;
 
   void setAutoExposure(bool enable) throw (AstraException);
+  void setManualExposure(int exposure) throw (AstraException);
   void setAutoWhiteBalance(bool enable) throw (AstraException);
 
   bool getAutoExposure() const;
+  int getManualExposure() const;
   bool getAutoWhiteBalance() const;
 
   void setUseDeviceTimer(bool enable);

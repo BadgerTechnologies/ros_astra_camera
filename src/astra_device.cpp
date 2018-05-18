@@ -552,6 +552,24 @@ void AstraDevice::setAutoExposure(bool enable) throw (AstraException)
 
   }
 }
+
+void AstraDevice::setManualExposure(int exposure) throw (AstraException)
+{
+  boost::shared_ptr<openni::VideoStream> stream = getColorVideoStream();
+
+  if (stream)
+  {
+    openni::CameraSettings* camera_seeting = stream->getCameraSettings();
+    if (camera_seeting)
+    {
+      const openni::Status rc = camera_seeting->setExposure(exposure);
+      if (rc != openni::STATUS_OK)
+        THROW_OPENNI_EXCEPTION("Couldn't set manual exposure: \n%s\n", openni::OpenNI::getExtendedError());
+    }
+
+  }
+}
+
 void AstraDevice::setAutoWhiteBalance(bool enable) throw (AstraException)
 {
   boost::shared_ptr<openni::VideoStream> stream = getColorVideoStream();
@@ -584,6 +602,24 @@ bool AstraDevice::getAutoExposure() const
 
   return ret;
 }
+
+int AstraDevice::getManualExposure() const
+{
+  int ret = -1;
+
+  boost::shared_ptr<openni::VideoStream> stream = getColorVideoStream();
+
+  if (stream)
+  {
+    openni::CameraSettings* camera_seeting = stream->getCameraSettings();
+    if (camera_seeting)
+      ret = camera_seeting->getExposure();
+  }
+
+  return ret;
+}
+
+
 bool AstraDevice::getAutoWhiteBalance() const
 {
   bool ret = false;

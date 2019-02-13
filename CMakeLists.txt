@@ -17,9 +17,9 @@ include(ExternalProject)
 
 ExternalProject_Add(astra_openni2
   PREFIX astra_openni2
-  # SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/astra_openni2/OpenNI2
-  GIT_REPOSITORY https://github.com/orbbec/OpenNI2.git
-  GIT_TAG orbbec_ros
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/astra_openni2/OpenNI2
+  #GIT_REPOSITORY https://github.com/orbbec/OpenNI2.git
+  #GIT_TAG orbbec_ros
   CONFIGURE_COMMAND echo "no need to configure"
   #${CMAKE_CURRENT_SOURCE_DIR}/libantlr/configure --prefix=<INSTALL_DIR>
   BUILD_IN_SOURCE 1

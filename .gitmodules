@@ -1,0 +1,3 @@
+[submodule "astra_openni2/OpenNI2"]
+	path = astra_openni2/OpenNI2
+	url = git@github.com:BadgerTechnologies/OpenNI2.git

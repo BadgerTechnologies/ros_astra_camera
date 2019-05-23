@@ -1,6 +1,31 @@
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package astra_camera
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+0.3.0 (2019-03-14)
+------------
+1. Add UVC RGB camera launch in  orbbec_UVCrgb_Launch
+2. Add OPENNI2 include files under include folder 
+3. Add video_modes_lookup_[13] 640X400 in astra_driver.cpp
+4. 56-orbbec-usb.rules now includes uvc support
+5. CMakeLists.txt changes accordingly 
+
+
+0.2.2 (2018-03-22)
+-----------
+* Add launchfile info and reformat nicely
+* Publish projector/camera_info (fixes disparity img)
+* modify gcc  optimizate problem
+* Contributors: Chan Jun Shern, Martin Günther, Mikael Arguedas, Tim
+
+0.2.1 (2018-02-12)
+-----------
+* 1,patch for catkin_make -j1 in docker 2,patch for x64 use x86 in docker 3,arm/arm64 use no-filter library
+* Contributors: Tim
+
+0.2.0 (2018-01-25)
+------------------
+* add support for astra mini s
+* Contributors: Tim Liu
 
 0.1.5 (2016-05-27)
 ------------------

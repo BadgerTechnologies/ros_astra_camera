@@ -68,6 +68,75 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
 
   readConfigFromParameterServer();
 
+#if MULTI_ASTRA
+	int bootOrder, devnums;
+  if (!pnh.getParam("bootorder", bootOrder))
+  {
+    bootOrder = 0;
+  }
+  
+  if (!pnh.getParam("devnums", devnums))
+  {
+    devnums = 1;
+  }
+
+	if( devnums>1 )
+	{
+		int shmid;
+		char *shm = NULL;
+		char *tmp;
+
+		if(  bootOrder==1 )
+		{
+			if( (shmid = shmget((key_t)0401, 1, 0666|IPC_CREAT)) == -1 )   
+			{ 
+				ROS_ERROR("Create Share Memory Error:%s", strerror(errno));
+			}
+			shm = (char *)shmat(shmid, 0, 0);  
+			*shm = 1;
+			initDevice();
+			ROS_INFO("*********** device_id %s already open device************************ ", device_id_.c_str());
+			*shm = 2;
+		}
+		{	
+			if( (shmid = shmget((key_t)0401, 1, 0666|IPC_CREAT)) == -1 )   
+			{ 
+			  	ROS_ERROR("Create Share Memory Error:%s", strerror(errno));
+			}
+			shm = (char *)shmat(shmid, 0, 0);
+			while( *shm!=bootOrder)
+			{
+				boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+			}
+
+			 initDevice();
+			 ROS_INFO("*********** device_id %s already open device************************ ", device_id_.c_str());
+			*shm = (bootOrder+1);
+		}
+		if(  bootOrder==devnums )
+		{
+			if(shmdt(shm) == -1)  
+			{  
+				ROS_ERROR("shmdt failed\n");  
+			} 
+			if(shmctl(shmid, IPC_RMID, 0) == -1)  
+			{  
+				ROS_ERROR("shmctl(IPC_RMID) failed\n");  
+			}
+		 }
+		 else
+		 {
+		 	if(shmdt(shm) == -1)  
+			{  
+				ROS_ERROR("shmdt failed\n");  
+			} 
+		 }
+	 }
+	 else
+	 {
+	 	initDevice();
+	 }
+#else
   std::string lockFileName = "";
   if (pnh.hasParam("lockfile"))
   {
@@ -95,7 +164,7 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
   {
       initDevice();
   }
-
+#endif
   // Initialize dynamic reconfigure
   reconfigure_server_.reset(new ReconfigureServer(pnh_));
   reconfigure_server_->setCallback(boost::bind(&AstraDriver::configCb, this, _1, _2));
@@ -123,6 +192,7 @@ void AstraDriver::advertiseROSTopics()
   image_transport::ImageTransport depth_it(depth_nh);
   ros::NodeHandle depth_raw_nh(nh_, "depth");
   image_transport::ImageTransport depth_raw_it(depth_raw_nh);
+  ros::NodeHandle projector_nh(nh_, "projector");
   // Advertise all published topics
 
   // Prevent connection callbacks from executing until we've set all the publishers. Otherwise
@@ -153,6 +223,7 @@ void AstraDriver::advertiseROSTopics()
     ros::SubscriberStatusCallback rssc = boost::bind(&AstraDriver::depthConnectCb, this);
     pub_depth_raw_ = depth_it.advertiseCamera("image_raw", 1, itssc, itssc, rssc, rssc);
     pub_depth_ = depth_raw_it.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
+    pub_projector_info_ = projector_nh.advertise<sensor_msgs::CameraInfo>("camera_info", 1, rssc, rssc);
   }
 
   ////////// CAMERA INFO MANAGER
@@ -468,6 +539,7 @@ void AstraDriver::depthConnectCb()
 
   depth_subscribers_ = pub_depth_.getNumSubscribers() > 0;
   depth_raw_subscribers_ = pub_depth_raw_.getNumSubscribers() > 0;
+  projector_info_subscribers_ = pub_projector_info_.getNumSubscribers() > 0;
 
   bool need_depth = depth_subscribers_ || depth_raw_subscribers_;
 
@@ -541,7 +613,7 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
 
     data_skip_depth_counter_ = 0;
 
-    if (depth_raw_subscribers_||depth_subscribers_)
+    if (depth_raw_subscribers_||depth_subscribers_||projector_info_subscribers_)
     {
       image->header.stamp = image->header.stamp + depth_time_offset_;
 
@@ -582,6 +654,12 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
       {
         sensor_msgs::ImageConstPtr floating_point_image = rawToFloatingPointConversion(image);
         pub_depth_.publish(floating_point_image, cam_info);
+      }
+
+      // Projector "info" probably only useful for working with disparity images
+      if (projector_info_subscribers_)
+      {
+        pub_projector_info_.publish(getProjectorCameraInfo(image->width, image->height, image->header.stamp));
       }
     }
   }
@@ -693,6 +771,17 @@ sensor_msgs::CameraInfoPtr AstraDriver::getDepthCameraInfo(int width, int height
   info->P[6] -= depth_ir_offset_y_*scaling; // cy
 
   /// @todo Could put this in projector frame so as to encode the baseline in P[3]
+  return info;
+}
+
+sensor_msgs::CameraInfoPtr AstraDriver::getProjectorCameraInfo(int width, int height, ros::Time time) const
+{
+  // The projector info is simply the depth info with the baseline encoded in the P matrix.
+  // It's only purpose is to be the "right" camera info to the depth camera's "left" for
+  // processing disparity images.
+  sensor_msgs::CameraInfoPtr info = getDepthCameraInfo(width, height, time);
+  // Tx = -baseline * fx
+  info->P[3] = -device_->getBaseline() * info->P[0];
   return info;
 }
 
@@ -1002,6 +1091,13 @@ output_mode_enum = gen.enum([  gen.const(  "SXGA_30Hz", int_t, 1,  "1280x1024@30
   video_mode.frame_rate_ = 60;
 
   video_modes_lookup_[12] = video_mode;
+
+  // 640*400_30Hz
+  video_mode.x_resolution_ = 640;
+  video_mode.y_resolution_ = 400;
+  video_mode.frame_rate_ = 30;
+
+  video_modes_lookup_[13] = video_mode;
 
 }
 

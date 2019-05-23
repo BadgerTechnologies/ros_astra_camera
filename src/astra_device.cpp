@@ -187,6 +187,11 @@ float AstraDevice::getDepthFocalLength(int output_y_resolution) const
   return focal_length;
 }
 
+float AstraDevice::getBaseline() const
+{
+  return 0.075f;
+}
+
 bool AstraDevice::isIRVideoModeSupported(const AstraVideoMode& video_mode) const
 {
   getSupportedIRVideoModes();

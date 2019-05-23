@@ -61,6 +61,7 @@ int main(int arc, char** argv)
       std::cerr << "Could not retrieve serial number: " << exception.what() << std::endl;
     }
   }
+  exit(0);
   return 0;
 }
 

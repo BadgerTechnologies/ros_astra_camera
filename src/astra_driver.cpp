@@ -152,15 +152,19 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
       {
           ROS_ERROR("Lock file \"%s\" could not be opened: %s", lockFileName.c_str(), strerror(errno));
       }
-      if (flock(fd, LOCK_EX) < 0)
+      else
       {
-          ROS_ERROR("Unable to lock file \"%s\": %s", lockFileName.c_str(), strerror(errno));
-      }
-      ROS_INFO("File locked for camera %s", device_id_.c_str());
-      initDevice();
-      if (flock(fd, LOCK_UN) < 0)
-      {
-          ROS_ERROR("Cannot unlock file \"%s\"!: %s", lockFileName.c_str(), strerror(errno));
+          if (flock(fd, LOCK_EX) < 0)
+          {
+              ROS_ERROR("Unable to lock file \"%s\": %s", lockFileName.c_str(), strerror(errno));
+          }
+          ROS_INFO("File locked for camera %s", device_id_.c_str());
+          initDevice();
+          if (flock(fd, LOCK_UN) < 0)
+          {
+              ROS_ERROR("Cannot unlock file \"%s\"!: %s", lockFileName.c_str(), strerror(errno));
+          }
+          close(fd);
       }
   }
   else

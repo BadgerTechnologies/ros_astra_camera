@@ -53,6 +53,8 @@
 #include "astra_camera/astra_device.h"
 #include "astra_camera/astra_video_mode.h"
 #include "astra_camera/GetSerial.h"
+#include "astra_camera/SetIRGain.h"
+#include "astra_camera/SetIRExposure.h"
 
 #include <ros/ros.h>
 
@@ -91,6 +93,8 @@ private:
   void depthConnectCb();
 
   bool getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res);
+  bool setIRGainCb(astra_camera::SetIRGainRequest& req, astra_camera::SetIRGainResponse& resp);
+  bool setIRExposureCb(astra_camera::SetIRExposureRequest& req, astra_camera::SetIRExposureResponse& resp);
 
   void configCb(Config &config, uint32_t level);
 
@@ -115,6 +119,9 @@ private:
 
   /** \brief get_serial server*/
   ros::ServiceServer get_serial_server;
+
+  ros::ServiceServer set_ir_gain_server;
+  ros::ServiceServer set_ir_exposure_server;
 
   /** \brief reconfigure server*/
   boost::shared_ptr<ReconfigureServer> reconfigure_server_;
@@ -144,6 +151,8 @@ private:
 
   bool color_depth_synchronization_;
   bool depth_registration_;
+  int ir_gain_;
+  int ir_exposure_;
 
   std::map<int, AstraVideoMode> video_modes_lookup_;
 

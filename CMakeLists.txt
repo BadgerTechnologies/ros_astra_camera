@@ -35,7 +35,9 @@ MESSAGE(STATUS "ORRBEC : ${HOST_PLATFORM}")
 
 generate_dynamic_reconfigure_options(cfg/Astra.cfg)
 add_service_files(FILES
-  GetSerial.srv)
+  GetSerial.srv
+  SetIRGain.srv
+  SetIRExposure.srv)
 generate_messages()
 
 catkin_package(

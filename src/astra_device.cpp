@@ -574,6 +574,38 @@ void AstraDevice::setAutoWhiteBalance(bool enable) throw (AstraException)
   }
 }
 
+void AstraDevice::setIRGain(int value) throw (AstraException)
+{
+  const openni::Status rc = openni_device_->setProperty(openni::OBEXTENSION_ID_IR_GAIN, &value, sizeof(int));
+  if (rc != openni::STATUS_OK)
+    THROW_OPENNI_EXCEPTION("Couldn't set ir gain: \n%s\n", openni::OpenNI::getExtendedError());
+}
+
+void AstraDevice::setIRExposure(int value) throw (AstraException)
+{
+  const openni::Status rc = openni_device_->setProperty(openni::OBEXTENSION_ID_IR_EXP, &value, sizeof(int));
+  if (rc != openni::STATUS_OK)
+    THROW_OPENNI_EXCEPTION("Couldn't set ir exposure: \n%s\n", openni::OpenNI::getExtendedError());
+}
+
+int AstraDevice::getIRGain() throw (AstraException)
+{
+  int value;
+  const openni::Status rc = openni_device_->getProperty(openni::OBEXTENSION_ID_IR_GAIN, &value);
+  if (rc != openni::STATUS_OK)
+    THROW_OPENNI_EXCEPTION("Couldn't get ir gain: \n%s\n", openni::OpenNI::getExtendedError());
+  return value;
+}
+
+int AstraDevice::getIRExposure() throw (AstraException)
+{
+  int value;
+  const openni::Status rc = openni_device_->getProperty(openni::OBEXTENSION_ID_IR_EXP, &value);
+  if (rc != openni::STATUS_OK)
+    THROW_OPENNI_EXCEPTION("Couldn't get ir exposure: \n%s\n", openni::OpenNI::getExtendedError());
+  return value;
+}
+
 bool AstraDevice::getAutoExposure() const
 {
   bool ret = false;

@@ -130,6 +130,11 @@ public:
   void setAutoExposure(bool enable) throw (AstraException);
   void setAutoWhiteBalance(bool enable) throw (AstraException);
 
+  void setIRGain(int value) throw (AstraException);
+  void setIRExposure(int value) throw (AstraException);
+  int getIRGain() throw (AstraException);
+  int getIRExposure() throw (AstraException);
+
   bool getAutoExposure() const;
   bool getAutoWhiteBalance() const;
 

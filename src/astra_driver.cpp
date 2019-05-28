@@ -247,12 +247,42 @@ void AstraDriver::advertiseROSTopics()
   ir_info_manager_  = boost::make_shared<camera_info_manager::CameraInfoManager>(ir_nh,  ir_name,  ir_info_url_);
 
   get_serial_server = nh_.advertiseService("get_serial", &AstraDriver::getSerialCb,this);
+  set_ir_gain_server = nh_.advertiseService("set_ir_gain",  &AstraDriver::setIRGainCb, this);
+  set_ir_exposure_server = nh_.advertiseService("set_ir_exposure",  &AstraDriver::setIRExposureCb, this);
 
 }
 
 bool AstraDriver::getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res) {
   res.serial = device_manager_->getSerial(device_->getUri());
   return true;
+}
+
+bool AstraDriver::setIRGainCb(astra_camera::SetIRGainRequest& req, astra_camera::SetIRGainResponse& resp __attribute__((unused))) {
+  bool result = true;
+  try
+  {
+    device_->setIRGain(req.value);
+  }
+  catch (const AstraException& exception)
+  {
+    ROS_ERROR("Could not set ir gain. Reason: %s", exception.what());
+    result = false;
+  }
+  return result;
+}
+
+bool AstraDriver::setIRExposureCb(astra_camera::SetIRExposureRequest& req, astra_camera::SetIRExposureResponse& resp __attribute__((unused))) {
+  bool result = true;
+  try
+  {
+    device_->setIRExposure(req.value);
+  }
+  catch (const AstraException& exception)
+  {
+    ROS_ERROR("Could not set ir exposure. Reason: %s", exception.what());
+    result = false;
+  }
+  return result;
 }
 
 void AstraDriver::configCb(Config &config, uint32_t level)

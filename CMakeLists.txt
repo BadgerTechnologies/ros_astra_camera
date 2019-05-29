@@ -63,6 +63,7 @@ add_library(astra_wrapper
 target_link_libraries(astra_wrapper ${catkin_LIBRARIES} -lOpenNI2Orbbec
   ${Boost_LIBRARIES} )
 add_dependencies(astra_wrapper astra_openni2 ${PROJECT_NAME}_generate_messages_cpp)
+add_dependencies(astra_wrapper ${catkin_EXPORTED_TARGETS})
 
 add_library(astra_driver_lib
                 src/astra_driver.cpp

@@ -32,6 +32,11 @@
 
 #include "astra_camera/astra_driver.h"
 #include <nodelet/nodelet.h>
+#include <signal.h>
+
+void term_handler(int sig) {
+  ros::requestShutdown();
+}
 
 namespace astra_camera
 {
@@ -46,6 +51,13 @@ public:
 private:
   virtual void onInit()
   {
+    /*
+     * handle SIGTERM and SIGINT so that we can shutdown cleanly. We have seen
+     * cameras get into bad states when this is not shutdown cleanly.
+     */
+    signal(SIGTERM, term_handler);
+    signal(SIGINT, term_handler);
+    printf("setting up SIGTERM handler %d\n", getpid());
     lp.reset(new astra_wrapper::AstraDriver(getNodeHandle(), getPrivateNodeHandle()));
   };
 

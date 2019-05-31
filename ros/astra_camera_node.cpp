@@ -31,12 +31,23 @@
  */
 
 #include "astra_camera/astra_driver.h"
+#include <signal.h>
+
+void term_handler(int sig) {
+  ros::requestShutdown();
+}
 
 int main(int argc, char **argv){
 
   ros::init(argc, argv, "astra_camera");
   ros::NodeHandle n;
   ros::NodeHandle pnh("~");
+  /*
+   * handle SIGTERM and SIGINT so that we can shutdown cleanly. We have seen
+   * cameras get into bad states when this is not shutdown cleanly.
+   */
+  signal(SIGINT, term_handler);
+  signal(SIGTERM, term_handler);
 
   astra_wrapper::AstraDriver drv(n, pnh);
 

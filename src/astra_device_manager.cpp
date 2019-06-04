@@ -84,9 +84,6 @@ public:
 
   ~AstraDeviceListener()
   {
-    openni::OpenNI::removeDeviceConnectedListener(this);
-    openni::OpenNI::removeDeviceDisconnectedListener(this);
-    openni::OpenNI::removeDeviceStateChangedListener(this);
   }
 
   virtual void onDeviceStateChanged(const openni::DeviceInfo* pInfo, openni::DeviceState state)

@@ -133,13 +133,13 @@ if (UNIX AND NOT APPLE)
   set(ADDITIONAL_EXECUTABLES "astra_usb_reset")
 endif()
 
-add_executable(camera_node src/libuvc_camera/main.cpp src/libuvc_camera/camera_driver.cpp)
-target_link_libraries(camera_node ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
-add_dependencies(camera_node ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_generate_messages_cpp)
+#add_executable(camera_node src/libuvc_camera/main.cpp src/libuvc_camera/camera_driver.cpp)
+#target_link_libraries(camera_node ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
+#add_dependencies(camera_node ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_generate_messages_cpp)
 
-add_library(libuvc_camera_nodelet src/libuvc_camera/nodelet.cpp src/libuvc_camera/camera_driver.cpp)
-target_link_libraries(libuvc_camera_nodelet ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
-add_dependencies(libuvc_camera_nodelet ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_generate_messages_cpp)
+#add_library(libuvc_camera_nodelet src/libuvc_camera/nodelet.cpp src/libuvc_camera/camera_driver.cpp)
+#target_link_libraries(libuvc_camera_nodelet ${libuvc_LIBRARIES} ${Boost_LIBRARIES} ${catkin_LIBRARIES})
+#add_dependencies(libuvc_camera_nodelet ${PROJECT_NAME}_gencfg ${PROJECT_NAME}_generate_messages_cpp)
 
 install(TARGETS astra_wrapper astra_camera_nodelet astra_camera_node astra_list_devices astra_driver_lib ${ADDITIONAL_EXECUTABLES}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -180,12 +180,12 @@ install(DIRECTORY scripts
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-install(TARGETS camera_node libuvc_camera_nodelet
-        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+#install(TARGETS camera_node libuvc_camera_nodelet
+#        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+#)
 
-install(FILES libuvc_camera_nodelet.xml
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+#install(FILES libuvc_camera_nodelet.xml
+#        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+#)

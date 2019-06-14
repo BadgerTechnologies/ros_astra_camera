@@ -337,16 +337,15 @@ bool AstraDriver::setIRFloodCb(astra_camera::SetIRFloodRequest& req, astra_camer
 
 void AstraDriver::configCb(Config &config, uint32_t level)
 {
-  if (device_->getDeviceTypeNo() == OB_STEREO_S_NO)
+  int dev_type = device_->getDeviceTypeNo();
+  if (dev_type == OB_STEREO_S_NO || dev_type == OB_EMBEDDED_S_NO)
   {
-    config.depth_mode = 13;
-    config.ir_mode = 13;
-  }
-  else if (device_->getDeviceTypeNo() == OB_EMBEDDED_S_NO)
-  {
-    config.depth_mode = 13;
-    config.ir_mode = 13;
-    uvc_flip_ = 1;
+    if (config.depth_mode < 13 || config.depth_mode > 14)
+      config.depth_mode = 13;
+    if (config.ir_mode < 13 || config.ir_mode > 14)
+      config.ir_mode = 13;
+    if (dev_type == OB_EMBEDDED_S_NO)
+      uvc_flip_ = 1;
   }
   bool stream_reset = false;
 

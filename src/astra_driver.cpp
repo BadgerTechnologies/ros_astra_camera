@@ -920,8 +920,10 @@ sensor_msgs::CameraInfoPtr AstraDriver::getIRCameraInfo(int width, int height, r
 
       info->K.assign(0.0);
       info->K[0] = (1 - uvc_flip_)*p.r_intr_p[0] + (uvc_flip_)*(-p.r_intr_p[0]);
+      info->K[0] *= 0.87;
       info->K[2] = (1 - uvc_flip_)*p.r_intr_p[2] + (uvc_flip_)*(width - p.r_intr_p[2]);
       info->K[4] = p.l_intr_p[1];
+      info->K[4] *= 0.97;
       info->K[5] = p.l_intr_p[3];
       info->K[8] = 1.0;
 

@@ -51,6 +51,11 @@ namespace astra_wrapper
 AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
     nh_(n),
     pnh_(pnh),
+    color_nh_(n, "rgb"),
+    ir_nh_(n, "ir"),
+    depth_nh_(n, "depth"),
+    depth_raw_nh_(n, "depth"),
+    projector_nh_(n, "projector"),
     device_manager_(AstraDeviceManager::getSingelton()),
     config_init_(false),
     data_skip_ir_counter_(0),
@@ -172,6 +177,29 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
       initDevice();
   }
 #endif
+
+    // Advertise all published topics
+
+    ////////// CAMERA INFO MANAGER
+
+    // Pixel offset between depth and IR images.
+    // By default assume offset of (5,4) from 9x7 correlation window.
+    // NOTE: These are now (temporarily?) dynamically reconfigurable, to allow tweaking.
+    //param_nh.param("depth_ir_offset_x", depth_ir_offset_x_, 5.0);
+    //param_nh.param("depth_ir_offset_y", depth_ir_offset_y_, 4.0);
+
+    // The camera names are set to [rgb|depth]_[serial#], e.g. depth_B00367707227042B.
+    // camera_info_manager substitutes this for ${NAME} in the URL.
+    std::string serial_number = device_->getStringID();
+    std::string color_name, ir_name;
+
+    color_name = "rgb_"   + serial_number;
+    ir_name  = "depth_" + serial_number;
+
+    // Load the saved calibrations, if they exist
+    color_info_manager_ = boost::make_shared<camera_info_manager::CameraInfoManager>(color_nh_, color_name, color_info_url_);
+    ir_info_manager_  = boost::make_shared<camera_info_manager::CameraInfoManager>(ir_nh_,  ir_name,  ir_info_url_);
+
   // Initialize dynamic reconfigure
   reconfigure_server_.reset(new ReconfigureServer(pnh_));
   reconfigure_server_->setCallback(boost::bind(&AstraDriver::configCb, this, _1, _2));
@@ -193,23 +221,16 @@ AstraDriver::~AstraDriver() {
 void AstraDriver::advertiseROSTopics()
 {
 
-  // Allow remapping namespaces rgb, ir, depth, depth_registered
-  ros::NodeHandle color_nh(nh_, "rgb");
-  image_transport::ImageTransport color_it(color_nh);
-  ros::NodeHandle ir_nh(nh_, "ir");
-  image_transport::ImageTransport ir_it(ir_nh);
-  ros::NodeHandle depth_nh(nh_, "depth");
-  image_transport::ImageTransport depth_it(depth_nh);
-  ros::NodeHandle depth_raw_nh(nh_, "depth");
-  image_transport::ImageTransport depth_raw_it(depth_raw_nh);
-  ros::NodeHandle projector_nh(nh_, "projector");
-  // Advertise all published topics
-
   // Prevent connection callbacks from executing until we've set all the publishers. Otherwise
   // connectCb() can fire while we're advertising (say) "depth/image_raw", but before we actually
   // assign to pub_depth_raw_. Then pub_depth_raw_.getNumSubscribers() returns 0, and we fail to start
   // the depth generator.
   boost::lock_guard<boost::mutex> lock(connect_mutex_);
+
+    image_transport::ImageTransport color_it_(color_nh_);
+    image_transport::ImageTransport ir_it_(ir_nh_);
+    image_transport::ImageTransport depth_it_(depth_nh_);
+    image_transport::ImageTransport depth_raw_it_(depth_raw_nh_);
 
   // Asus Xtion PRO does not have an RGB camera
   //ROS_WARN("-------------has color sensor is %d----------- ", device_->hasColorSensor());
@@ -217,44 +238,24 @@ void AstraDriver::advertiseROSTopics()
   {
     image_transport::SubscriberStatusCallback itssc = boost::bind(&AstraDriver::imageConnectCb, this);
     ros::SubscriberStatusCallback rssc = boost::bind(&AstraDriver::imageConnectCb, this);
-    pub_color_ = color_it.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
+    pub_color_ = color_it_.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
   }
 
   if (device_->hasIRSensor())
   {
     image_transport::SubscriberStatusCallback itssc = boost::bind(&AstraDriver::imageConnectCb, this);
     ros::SubscriberStatusCallback rssc = boost::bind(&AstraDriver::imageConnectCb, this);
-    pub_ir_ = ir_it.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
+    pub_ir_ = ir_it_.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
   }
 
   if (device_->hasDepthSensor())
   {
     image_transport::SubscriberStatusCallback itssc = boost::bind(&AstraDriver::depthConnectCb, this);
     ros::SubscriberStatusCallback rssc = boost::bind(&AstraDriver::depthConnectCb, this);
-    pub_depth_raw_ = depth_it.advertiseCamera("image_raw", 1, itssc, itssc, rssc, rssc);
-    pub_depth_ = depth_raw_it.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
-    pub_projector_info_ = projector_nh.advertise<sensor_msgs::CameraInfo>("camera_info", 1, rssc, rssc);
+    pub_depth_raw_ = depth_it_.advertiseCamera("image_raw", 1, itssc, itssc, rssc, rssc);
+    pub_depth_ = depth_raw_it_.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
+    pub_projector_info_ = projector_nh_.advertise<sensor_msgs::CameraInfo>("camera_info", 1, rssc, rssc);
   }
-
-  ////////// CAMERA INFO MANAGER
-
-  // Pixel offset between depth and IR images.
-  // By default assume offset of (5,4) from 9x7 correlation window.
-  // NOTE: These are now (temporarily?) dynamically reconfigurable, to allow tweaking.
-  //param_nh.param("depth_ir_offset_x", depth_ir_offset_x_, 5.0);
-  //param_nh.param("depth_ir_offset_y", depth_ir_offset_y_, 4.0);
-
-  // The camera names are set to [rgb|depth]_[serial#], e.g. depth_B00367707227042B.
-  // camera_info_manager substitutes this for ${NAME} in the URL.
-  std::string serial_number = device_->getStringID();
-  std::string color_name, ir_name;
-
-  color_name = "rgb_"   + serial_number;
-  ir_name  = "depth_" + serial_number;
-
-  // Load the saved calibrations, if they exist
-  color_info_manager_ = boost::make_shared<camera_info_manager::CameraInfoManager>(color_nh, color_name, color_info_url_);
-  ir_info_manager_  = boost::make_shared<camera_info_manager::CameraInfoManager>(ir_nh,  ir_name,  ir_info_url_);
 
   get_serial_server = nh_.advertiseService("get_serial", &AstraDriver::getSerialCb, this);
   get_device_type_server = nh_.advertiseService("get_device_type", &AstraDriver::getDeviceTypeCb, this);
@@ -336,7 +337,8 @@ bool AstraDriver::resetIRExposureCb(astra_camera::ResetIRExposureRequest& req, a
 
 bool AstraDriver::getCameraInfoCb(astra_camera::GetCameraInfoRequest& req, astra_camera::GetCameraInfoResponse& res)
 {
-  res.info = convertAstraCameraInfo(device_->getCameraParams(), ros::Time::now());
+  res.info = convertAstraCameraInfo(device_->getCameraParams());
+  res.info.header.stamp = ros::Time::now();
   return true;
 }
 
@@ -425,6 +427,16 @@ void AstraDriver::configCb(Config &config, uint32_t level)
   color_time_offset_ = ros::Duration(config.color_time_offset);
   depth_time_offset_ = ros::Duration(config.depth_time_offset);
 
+  color_depth_synchronization_ = config.color_depth_synchronization;
+  depth_registration_ = config.depth_registration;
+
+  auto_exposure_ = config.auto_exposure;
+  auto_white_balance_ = config.auto_white_balance;
+
+  use_device_time_ = config.use_device_time;
+
+  data_skip_ = config.data_skip+1;
+
   if (!config_init_ || (config.ir_mode != old_config_.ir_mode)){
     if (lookupVideoModeFromDynConfig(config.ir_mode, ir_video_mode_)<0)
     {
@@ -465,7 +477,10 @@ void AstraDriver::configCb(Config &config, uint32_t level)
     }
   }
 
-  if (!config_init_ || (config.depth_mode != old_config_.depth_mode)){
+  if (!config_init_
+      || (config.depth_mode != old_config_.depth_mode)
+      || (config.depth_registration != old_config_.depth_registration))
+  {
     if (lookupVideoModeFromDynConfig(config.depth_mode, depth_video_mode_)<0)
     {
       ROS_ERROR("Undefined depth video mode received from dynamic reconfigure");
@@ -488,16 +503,6 @@ void AstraDriver::configCb(Config &config, uint32_t level)
     }
   }
 
-  color_depth_synchronization_ = config.color_depth_synchronization;
-  depth_registration_ = config.depth_registration;
-
-  auto_exposure_ = config.auto_exposure;
-  auto_white_balance_ = config.auto_white_balance;
-
-  use_device_time_ = config.use_device_time;
-
-  data_skip_ = config.data_skip+1;
-
   applyConfigToOpenNIDevice();
 
   config_init_ = true;
@@ -509,11 +514,13 @@ void AstraDriver::setIRVideoMode(const AstraVideoMode& ir_video_mode)
 {
   if (device_->isIRVideoModeSupported(ir_video_mode))
   {
+      // Update camera intrinsics to reflect new mode
+      ir_camera_info_ = getIRCameraInfo(ir_video_mode);
+
     if (ir_video_mode != device_->getIRVideoMode())
     {
       device_->setIRVideoMode(ir_video_mode);
     }
-
   }
   else
   {
@@ -524,6 +531,9 @@ void AstraDriver::setColorVideoMode(const AstraVideoMode& color_video_mode)
 {
   if (device_->isColorVideoModeSupported(color_video_mode))
   {
+      // Update camera intrinsics to reflect new mode
+      color_camera_info_ = getColorCameraInfo(color_video_mode);
+
     if (color_video_mode != device_->getColorVideoMode())
     {
       device_->setColorVideoMode(color_video_mode);
@@ -538,6 +548,9 @@ void AstraDriver::setDepthVideoMode(const AstraVideoMode& depth_video_mode)
 {
   if (device_->isDepthVideoModeSupported(depth_video_mode))
   {
+      // Update camera intrinsics to reflect new mode
+      depth_camera_info_ = getDepthCameraInfo(depth_video_mode);
+
     if (depth_video_mode != device_->getDepthVideoMode())
     {
       device_->setDepthVideoMode(depth_video_mode);
@@ -716,7 +729,10 @@ void AstraDriver::newIRFrameCallback(sensor_msgs::ImagePtr image)
       image->header.frame_id = ir_frame_id_;
       image->header.stamp = image->header.stamp + ir_time_offset_;
 
-      pub_ir_.publish(image, getIRCameraInfo(image->width, image->height, image->header.stamp));
+      // Update camera info timestamp to match current frame
+      ir_camera_info_->header.stamp = image->header.stamp;
+
+      pub_ir_.publish(image, ir_camera_info_);
     }
   }
 }
@@ -732,7 +748,10 @@ void AstraDriver::newColorFrameCallback(sensor_msgs::ImagePtr image)
       image->header.frame_id = color_frame_id_;
       image->header.stamp = image->header.stamp + color_time_offset_;
 
-      pub_color_.publish(image, getColorCameraInfo(image->width, image->height, image->header.stamp));
+      // Update camera info timestamp to match current frame
+      color_camera_info_->header.stamp = image->header.stamp;
+
+      pub_color_.publish(image, color_camera_info_);
     }
   }
 }
@@ -754,6 +773,10 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
     if (depth_raw_subscribers_||depth_subscribers_||projector_info_subscribers_)
     {
       image->header.stamp = image->header.stamp + depth_time_offset_;
+      if (depth_registration_)
+          image->header.frame_id = color_frame_id_;
+      else
+          image->header.frame_id = depth_frame_id_;
 
       if (z_offset_mm_ != 0)
       {
@@ -771,38 +794,36 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
                 data[i] = static_cast<uint16_t>(data[i] * z_scaling_);
       }
 
-      sensor_msgs::CameraInfoPtr cam_info;
-
-      if (depth_registration_)
-      {
-        image->header.frame_id = color_frame_id_;
-      } else
-      {
-        image->header.frame_id = depth_frame_id_;
-      }
-      cam_info = getDepthCameraInfo(image->width, image->height, image->header.stamp);
-
       if (depth_raw_subscribers_)
       {
-        pub_depth_raw_.publish(image, cam_info);
+        // Update camera info timestamp to match current frame
+        depth_camera_info_->header.stamp = image->header.stamp;
+
+        pub_depth_raw_.publish(image, depth_camera_info_);
       }
 
       if (depth_subscribers_ )
       {
         sensor_msgs::ImageConstPtr floating_point_image = rawToFloatingPointConversion(image);
-        pub_depth_.publish(floating_point_image, cam_info);
+
+        // Update camera info timestamp to match current frame
+        depth_camera_info_->header.stamp = image->header.stamp;
+
+        pub_depth_.publish(floating_point_image, depth_camera_info_);
       }
 
       // Projector "info" probably only useful for working with disparity images
       if (projector_info_subscribers_)
       {
-        pub_projector_info_.publish(getProjectorCameraInfo(image->width, image->height, image->header.stamp));
+        // Update camera info timestamp to match current frame
+        projector_camera_info_->header.stamp = image->header.stamp;
+        pub_projector_info_.publish(projector_camera_info_);
       }
     }
   }
 }
 
-sensor_msgs::CameraInfo AstraDriver::convertAstraCameraInfo(OBCameraParams p, ros::Time time) const
+sensor_msgs::CameraInfo AstraDriver::convertAstraCameraInfo(OBCameraParams p) const
 {
   sensor_msgs::CameraInfo info;
   // info.width = width;
@@ -838,18 +859,17 @@ sensor_msgs::CameraInfo AstraDriver::convertAstraCameraInfo(OBCameraParams p, ro
   info.P[10] = 1.0;
   info.P[11] = p.r2l_t[2];
   // Fill in header
-  info.header.stamp    = time;
   info.header.frame_id = color_frame_id_;
   return info;
 }
 
 // Methods to get calibration parameters for the various cameras
-sensor_msgs::CameraInfoPtr AstraDriver::getDefaultCameraInfo(int width, int height, double f) const
+sensor_msgs::CameraInfoPtr AstraDriver::getDefaultCameraInfo(const AstraVideoMode& video_mode, double f) const
 {
-  sensor_msgs::CameraInfoPtr info = boost::make_shared<sensor_msgs::CameraInfo>();
+  sensor_msgs::CameraInfoPtr info(new sensor_msgs::CameraInfo);
 
-  info->width  = width;
-  info->height = height;
+  info->width  = video_mode.x_resolution_;
+  info->height = video_mode.y_resolution_;
 
   // No distortion
   info->D.resize(5, 0.0);
@@ -858,10 +878,20 @@ sensor_msgs::CameraInfoPtr AstraDriver::getDefaultCameraInfo(int width, int heig
   // Simple camera matrix: square pixels (fx = fy), principal point at center
   info->K.assign(0.0);
   info->K[0] = info->K[4] = f;
-  info->K[2] = (width / 2) - 0.5;
-  // Aspect ratio for the camera center on Astra (and other devices?) is 4/3
-  // This formula keeps the principal point the same in VGA and SXGA modes
-  info->K[5] = (width * (3./8.)) - 0.5;
+  info->K[2] = (info->width / 2) - 0.5;
+
+  if (astraWithUVC(device_->getDeviceTypeNo()))
+  {
+      // S devices have the same aspect ratio
+      info->K[5] = (info->height / 2) - 0.5;
+  }
+  else
+  {
+      // Aspect ratio for the camera center on Astra is 4/3
+      // This formula keeps the principal point the same in VGA and SXGA modes
+      // At SXGA mode, the IR image has an extra band of pixels at the bottom of the image
+      info->K[5] = (info->width * (3./8.)) - 0.5;
+  }
   info->K[8] = 1.0;
 
   // No separate rectified image plane, so R = I
@@ -879,163 +909,224 @@ sensor_msgs::CameraInfoPtr AstraDriver::getDefaultCameraInfo(int width, int heig
 }
 
 /// @todo Use binning/ROI properly in publishing camera infos
-sensor_msgs::CameraInfoPtr AstraDriver::getColorCameraInfo(int width, int height, ros::Time time) const
+sensor_msgs::CameraInfoPtr AstraDriver::getColorCameraInfo(const AstraVideoMode& video_mode) const
 {
-  sensor_msgs::CameraInfoPtr info;
+    sensor_msgs::CameraInfoPtr info;
 
-  if (color_info_manager_->isCalibrated())
-  {
-    info = boost::make_shared<sensor_msgs::CameraInfo>(color_info_manager_->getCameraInfo());
-    if ( info->width != width )
+    int width = video_mode.x_resolution_;
+    int height = video_mode.y_resolution_;
+
+    // Check scaling parameters
+    if (color_info_manager_->isCalibrated())
     {
-      // Use uncalibrated values
-      ROS_WARN_ONCE("Image resolution doesn't match calibration of the RGB camera. Using default parameters.");
-      info = getDefaultCameraInfo(width, height, device_->getColorFocalLength(height));
+        sensor_msgs::CameraInfo ext_info = color_info_manager_->getCameraInfo();
+
+        // Does resolution of external parameters match the desired resolution?
+        if (info->height != height || info->width != width)
+        {
+            // Ensure aspect ratio is correct and that width is not 0
+            if (height * info->width == width * info->height && info->width > 0)
+            {
+                ROS_WARN("The requested color info resolution does not match the external parameters, but the aspect ratio is consistent. Scaling the camera parameters.");
+
+                double scale_factor = double(width) / double(info->width);
+
+                info->K[0] *= scale_factor;
+                info->K[2] *= scale_factor;
+                info->K[4] *= scale_factor;
+                info->K[5] *= scale_factor;
+            }
+            else
+            {
+                // TODO: Ideally we would pick the device parameters in this case...
+                ROS_WARN("The external parameters for IR camera do not match the stream size. Generating default parameters.");
+                info = getDefaultCameraInfo(video_mode, device_->getColorFocalLength(height));
+            }
+        }
     }
-  }
-  else
-  {
-    // If uncalibrated, fill in default values
-    if (device_->isCameraParamsValid())
+    else if (device_->isCameraParamsValid())
     {
-      sensor_msgs::CameraInfo cinfo = convertAstraCameraInfo(device_->getCameraParams(), time);
-      info = boost::make_shared<sensor_msgs::CameraInfo>(ir_info_manager_->getCameraInfo());
-      info->D.resize(5, 0.0);
-      info->K.assign(0.0);
-      info->R.assign(0.0);
-      info->P.assign(0.0);
-      info->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
-      info->width = width;
-      info->height = height;
-
-      for (int i = 0; i < 9; i++)
-      {
-        info->K[i] = cinfo.K[i];
-        info->R[i] = cinfo.R[i];
-      }
-
-      for (int i = 0; i < 12; i++)
-      {
-        info->P[i] = cinfo.P[i];
-      }
-/*02112020 color camera param change according to resolution */
-  double scaling = (double)width / 640;
-  info->K[0] *= scaling; // fx
-  info->K[2] *= scaling; // cx
-  info->K[4] *= scaling; // fy
-  info->K[5] *= scaling; // cy
-  info->P[0] *= scaling; // fx
-  info->P[2] *= scaling; // cx
-  info->P[5] *= scaling; // fy
-  info->P[6] *= scaling; // cy
-/* 02112020 end*/
-	    
+        // Get camera info directly from device
     }
     else
     {
-      info = getDefaultCameraInfo(width, height, device_->getColorFocalLength(height));
+      info = getDefaultCameraInfo(video_mode, device_->getColorFocalLength(height));
     }
-  }
 
-  // Fill in header
-  info->header.stamp    = time;
-  info->header.frame_id = color_frame_id_;
+    // Fill in header
+    info->header.frame_id = color_frame_id_;
 
-  return info;
+    return info;
 }
 
 
-sensor_msgs::CameraInfoPtr AstraDriver::getIRCameraInfo(int width, int height, ros::Time time) const
+sensor_msgs::CameraInfoPtr AstraDriver::getIRCameraInfo(const AstraVideoMode &video_mode) const
 {
-  sensor_msgs::CameraInfoPtr info;
 
-  if (ir_info_manager_->isCalibrated())
-  {
-    info = boost::make_shared<sensor_msgs::CameraInfo>(ir_info_manager_->getCameraInfo());
-    if ( info->width != width )
+    sensor_msgs::CameraInfoPtr info(new sensor_msgs::CameraInfo);
+
+    // Set info resolution
+    int width = video_mode.x_resolution_;
+    int height = video_mode.y_resolution_;
+
+    // Use external parameters, if available
+    if (ir_info_manager_->isCalibrated())
     {
-      // Use uncalibrated values
-      ROS_WARN_ONCE("Image resolution doesn't match calibration of the IR camera. Using default parameters.");
-      info = getDefaultCameraInfo(width, height, device_->getIRFocalLength(height));
-    }
-  }
-  else
-  {
-    // If uncalibrated, fill in default values
-    info = getDefaultCameraInfo(width, height, device_->getDepthFocalLength(height));
+        info.reset(new sensor_msgs::CameraInfo(ir_info_manager_->getCameraInfo()));
 
-    if (device_->isCameraParamsValid())
+        if (info->height != height || info->width != width)
+        {
+            if (height * info->width == width * info->height && info->width > 0)
+            {
+                ROS_WARN("The requested IR info resolution does not match the external parameters, but the aspect ratio is consistent. Scaling the camera parameters.");
+
+                double scale_factor = double(width) / double(info->width);
+
+                info->K[0] *= scale_factor;
+                info->K[2] *= scale_factor;
+                info->K[4] *= scale_factor;
+                info->K[5] *= scale_factor;
+            }
+            else
+            {
+                // TODO: Check if this is a UVC device, and if so, grab UVC parameters instead of defaults
+                ROS_WARN("The external parameters for IR camera do not match the stream size. Generating default parameters.");
+                info = getDefaultCameraInfo(video_mode, device_->getIRFocalLength(height));
+            }
+        }
+    }
+
+    // Use internal parameters, if available
+    else if(device_->isCameraParamsValid() && (640 * height == width * 400))
     {
-      OBCameraParams p = device_->getCameraParams();
-      info->D.resize(5, 0.0);
-      // info->D[0] = p.l_k[0];
-      // info->D[1] = p.l_k[1];
-      // info->D[2] = p.l_k[3];
-      // info->D[3] = p.l_k[4];
-      // info->D[4] = p.l_k[2];
+        // Determine scaling factor for camera intrinsics
+        double scale_factor = 1.0;
 
-      info->K.assign(0.0);
-      info->K[0] = p.l_intr_p[0];
-      info->K[2] = p.l_intr_p[2];
-      info->K[4] = p.l_intr_p[1];
-      info->K[5] = p.l_intr_p[3];
-      info->K[8] = 1.0;
+        if (width != 640)
+        {
+            scale_factor = double(width) / double(640);
+        }
 
-      info->R.assign(0.0);
-      info->R[0] = 1;
-      info->R[4] = 1;
-      info->R[8] = 1;
+        // Extract camera parameters from device
+        OBCameraParams p = device_->getCameraParams();
 
-      info->P.assign(0.0);
-      info->P[0] = info->K[0];
-      info->P[2] = info->K[2];
-      info->P[5] = info->K[4];
-      info->P[6] = info->K[5];
-      info->P[10] = 1.0;
-/* 02122020 Scale IR Params */
-  double scaling = (double)width / 640;
-  info->K[0] *= scaling; // fx
-  info->K[2] *= scaling; // cx
-  info->K[4] *= scaling; // fy
-  info->K[5] *= scaling; // cy
-  info->P[0] *= scaling; // fx
-  info->P[2] *= scaling; // cx
-  info->P[5] *= scaling; // fy
-  info->P[6] *= scaling; // cy
-/* 02122020 end */	    
-	 
+        // Grab the exact intrinsics stored on the device an apply directly to image
+        info->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+        info->D.resize(5, 0.0);
+        info->D[0] = p.l_k[0];
+        info->D[1] = p.l_k[1];
+        info->D[2] = p.l_k[3];
+        info->D[3] = p.l_k[4];
+        info->D[4] = p.l_k[2];
+
+        info->K.assign(0.0);
+        info->K[0] = p.l_intr_p[0] * scale_factor;
+        info->K[2] = p.l_intr_p[2] * scale_factor;
+        info->K[4] = p.l_intr_p[1] * scale_factor;
+        info->K[5] = p.l_intr_p[3] * scale_factor;
+        info->K[8] = 1.0;
+
+        info->R.assign(0.0);
+        for (int i = 0; i < 9; i++) {
+            info->R[i] = p.r2l_r[i];
+        }
+
+        info->P.assign(0.0);
+        info->P[0] = info->K[0];
+        info->P[2] = info->K[2];
+        info->P[5] = info->K[4];
+        info->P[6] = info->K[5];
+        info->P[10] = 1.0;
     }
-  }
+    else
+    {
+        // Not a UVC device. Generate default parameters. Gross. Bad. Avoid this.
+        info = getDefaultCameraInfo(video_mode, device_->getIRFocalLength(height));
+    }
 
-  // Fill in header
-  info->header.stamp    = time;
-  info->header.frame_id = depth_frame_id_;
+    info->header.frame_id = ir_frame_id_;
+    info->width = video_mode.x_resolution_;
+    info->height = video_mode.y_resolution_;
 
-  return info;
+    return info;
 }
 
-sensor_msgs::CameraInfoPtr AstraDriver::getDepthCameraInfo(int width, int height, ros::Time time) const
+sensor_msgs::CameraInfoPtr AstraDriver::getDepthCameraInfo(const AstraVideoMode &video_mode) const
 {
-  // The depth image has essentially the same intrinsics as the IR image, BUT the
-  // principal point is offset by half the size of the hardware correlation window
-  // (probably 9x9 or 9x7 in 640x480 mode). See http://www.ros.org/wiki/kinect_calibration/technical
-  double scaling = (double)width / 640;
-  sensor_msgs::CameraInfoPtr info = getIRCameraInfo(width, height, time);
-  info->K[2] -= depth_ir_offset_x_ * scaling;
-  info->K[5] -= depth_ir_offset_y_ * scaling;
-  info->P[2] -= depth_ir_offset_x_ * scaling;
-  info->P[6] -= depth_ir_offset_y_ * scaling;
+    sensor_msgs::CameraInfoPtr info(new sensor_msgs::CameraInfo);
 
-  /// @todo Could put this in projector frame so as to encode the baseline in P[3]
-  return info;
+    if (depth_registration_)
+    {
+        // Depth registration maps the IR (depth) image to the RGB image
+        // Thus, the intrinsics should be based off of the transformation from IR to RGB, and primarily us RGB intrinsics
+
+        info->width = video_mode.x_resolution_;
+        info->height = video_mode.y_resolution_;
+
+        OBCameraParams p = device_->getCameraParams();
+
+        info->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+        info->D.resize(5, 0.0);
+        info->D[0] = p.r_k[0];
+        info->D[1] = p.r_k[1];
+        info->D[2] = p.r_k[3];
+        info->D[3] = p.r_k[4];
+        info->D[4] = p.r_k[2];
+
+        info->K.assign(0.0);
+        info->K[0] = p.r_intr_p[0];
+        info->K[2] = p.r_intr_p[2];
+        info->K[4] = p.r_intr_p[1];
+        info->K[5] = p.r_intr_p[3];
+        info->K[8] = 1.0;
+
+        info->R.assign(0.0);
+        for (int i = 0; i < 9; i++)
+        {
+            info->R[i] = p.r2l_r[i];
+        }
+
+        info->P.assign(0.0);
+        info->P[0] = info->K[0];
+        info->P[2] = info->K[2];
+        info->P[3] = p.r2l_t[0];
+        info->P[5] = info->K[4];
+        info->P[6] = info->K[5];
+        info->P[7] = p.r2l_t[1];
+        info->P[10] = 1.0;
+        info->P[11] = p.r2l_t[2];
+
+        info->header.frame_id = color_frame_id_;
+    }
+    else
+    {
+
+        // The depth image has essentially the same intrinsics as the IR image, BUT the
+        // principal point is offset by half the size of the hardware correlation window
+        // (probably 9x9 or 9x7 in 640x480 mode). See http://www.ros.org/wiki/kinect_calibration/technical
+        double scaling = (double)video_mode.x_resolution_ / 640;
+
+        info = getIRCameraInfo(video_mode);
+
+        info->K[2] -= depth_ir_offset_x_*scaling; // cx
+        info->K[5] -= depth_ir_offset_y_*scaling; // cy
+        info->P[2] -= depth_ir_offset_x_*scaling; // cx
+        info->P[6] -= depth_ir_offset_y_*scaling; // cy
+
+        /// @todo Could put this in projector frame so as to encode the baseline in P[3]
+
+        info->header.frame_id = depth_frame_id_;
+    }
+
+    return info;
 }
 
-sensor_msgs::CameraInfoPtr AstraDriver::getProjectorCameraInfo(int width, int height, ros::Time time) const
+sensor_msgs::CameraInfoPtr AstraDriver::getProjectorCameraInfo(const AstraVideoMode& depth_video_mode) const
 {
   // The projector info is simply the depth info with the baseline encoded in the P matrix.
   // It's only purpose is to be the "right" camera info to the depth camera's "left" for
   // processing disparity images.
-  sensor_msgs::CameraInfoPtr info = getDepthCameraInfo(width, height, time);
+  sensor_msgs::CameraInfoPtr info = getDepthCameraInfo(depth_video_mode);
   // Tx = -baseline * fx
   info->P[3] = -device_->getBaseline() * info->P[0];
   return info;

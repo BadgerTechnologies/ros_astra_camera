@@ -1005,8 +1005,8 @@ sensor_msgs::CameraInfoPtr AstraDriver::getIRCameraInfo(const AstraVideoMode &vi
     }
     else
     {
-        // Not a UVC device. Generate default parameters. Gross. Bad. Avoid this.
-        info = getDefaultCameraInfo(video_mode, device_->getDepthFocalLength(height));
+        // Generate default parameters for 4/3 aspect ratio (true for non-UVC devices)
+        info = getDefaultCameraInfo(video_mode, device_->getDepthFocalLength(width * 3./4.));
     }
 
     info->header.frame_id = ir_frame_id_;

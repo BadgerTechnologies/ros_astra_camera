@@ -991,7 +991,7 @@ sensor_msgs::CameraInfoPtr AstraDriver::getIRCameraInfo(const AstraVideoMode &vi
             {
                 // TODO: Check if this is a UVC device, and if so, grab UVC parameters instead of defaults
                 ROS_WARN("The external parameters for IR camera do not match the stream size. Generating default parameters.");
-                info = getDefaultCameraInfo(video_mode, device_->getIRFocalLength(height));
+                info = getDefaultCameraInfo(video_mode, device_->getDepthFocalLength(height));
             }
         }
     }
@@ -1041,7 +1041,7 @@ sensor_msgs::CameraInfoPtr AstraDriver::getIRCameraInfo(const AstraVideoMode &vi
     else
     {
         // Not a UVC device. Generate default parameters. Gross. Bad. Avoid this.
-        info = getDefaultCameraInfo(video_mode, device_->getIRFocalLength(height));
+        info = getDefaultCameraInfo(video_mode, device_->getDepthFocalLength(height));
     }
 
     info->header.frame_id = ir_frame_id_;

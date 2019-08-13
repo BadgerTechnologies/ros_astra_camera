@@ -855,7 +855,7 @@ sensor_msgs::CameraInfoPtr AstraDriver::getDefaultCameraInfo(const AstraVideoMod
       // Aspect ratio for the camera center on Astra is 4/3
       // This formula keeps the principal point the same in VGA and SXGA modes
       // At SXGA mode, the IR image has an extra band of pixels at the bottom of the image
-      info->K[5] = (info->width * (3./8.)) - 0.5;
+      info->K[5] = (info->width * (3. / 8.)) - 0.5;
   }
   info->K[8] = 1.0;
 
@@ -909,9 +909,41 @@ sensor_msgs::CameraInfoPtr AstraDriver::getColorCameraInfo(const AstraVideoMode&
             }
         }
     }
-    else if (astraWithUVC(device_->getDeviceTypeNo()))
+    // UVC RGB cameras have 4/3 aspect ratio
+    else if (astraWithUVC(device_->getDeviceTypeNo()) && (4 * height == width * 3))
     {
-        // Get camera info directly from device
+        // Determine scaling factor for camera intrinsics
+        double scale_factor = 1.0;
+
+        if (width != 640) {
+            scale_factor = double(width) / double(640);
+        }
+
+        // Extract camera parameters from device
+        OBCameraParams p = device_->getCameraParams();
+
+        // Grab the exact intrinsics stored on the device an apply directly to image
+        info->distortion_model = sensor_msgs::distortion_models::PLUMB_BOB;
+        info->D.resize(5, 0.0);
+        info->D[0] = p.r_k[0];
+        info->D[1] = p.r_k[1];
+        info->D[2] = p.r_k[3];
+        info->D[3] = p.r_k[4];
+        info->D[4] = p.r_k[2];
+
+        info->K.assign(0.0);
+        info->K[0] = p.r_intr_p[0] * scale_factor;
+        info->K[2] = p.r_intr_p[2] * scale_factor;
+        info->K[4] = p.r_intr_p[1] * scale_factor;
+        info->K[5] = p.r_intr_p[3] * scale_factor;
+        info->K[8] = 1.0;
+
+        info->P.assign(0.0);
+        info->P[0] = info->K[0];
+        info->P[2] = info->K[2];
+        info->P[5] = info->K[4];
+        info->P[6] = info->K[5];
+        info->P[10] = 1.0;
     }
     else
     {

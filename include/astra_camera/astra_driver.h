@@ -87,12 +87,12 @@ private:
   void newDepthFrameCallback(sensor_msgs::ImagePtr image);
 
   // Methods to get calibration parameters for the various cameras
-  sensor_msgs::CameraInfoPtr getDefaultCameraInfo(int width, int height, double f) const;
-  sensor_msgs::CameraInfoPtr getColorCameraInfo(int width, int height, ros::Time time) const;
-  sensor_msgs::CameraInfoPtr getIRCameraInfo(int width, int height, ros::Time time) const;
-  sensor_msgs::CameraInfoPtr getDepthCameraInfo(int width, int height, ros::Time time) const;
-  sensor_msgs::CameraInfoPtr getProjectorCameraInfo(int width, int height, ros::Time time) const;
-  sensor_msgs::CameraInfo convertAstraCameraInfo(OBCameraParams p, ros::Time time) const;
+  sensor_msgs::CameraInfoPtr getDefaultCameraInfo(const AstraVideoMode& video_mode, double f) const;
+  sensor_msgs::CameraInfoPtr getIRCameraInfo(const AstraVideoMode& video_mode) const;
+  sensor_msgs::CameraInfoPtr getColorCameraInfo(const AstraVideoMode& video_mode) const;
+  sensor_msgs::CameraInfoPtr getDepthCameraInfo(const AstraVideoMode& video_mode) const;
+  sensor_msgs::CameraInfoPtr getProjectorCameraInfo(const AstraVideoMode& video_mode) const;
+  sensor_msgs::CameraInfo convertAstraCameraInfo(OBCameraParams p) const;
 
   void readConfigFromParameterServer();
 
@@ -134,6 +134,11 @@ private:
 
   ros::NodeHandle& nh_;
   ros::NodeHandle& pnh_;
+  ros::NodeHandle color_nh_;
+  ros::NodeHandle ir_nh_;
+  ros::NodeHandle depth_nh_;
+  ros::NodeHandle depth_raw_nh_;
+  ros::NodeHandle projector_nh_;
 
   boost::shared_ptr<AstraDeviceManager> device_manager_;
   boost::shared_ptr<AstraDevice> device_;
@@ -180,6 +185,11 @@ private:
   std::string depth_frame_id_ ;
 
   std::string color_info_url_, ir_info_url_;
+
+  sensor_msgs::CameraInfoPtr ir_camera_info_;
+  sensor_msgs::CameraInfoPtr color_camera_info_;
+  sensor_msgs::CameraInfoPtr depth_camera_info_;
+  sensor_msgs::CameraInfoPtr projector_camera_info_;
 
   bool color_depth_synchronization_;
   bool depth_registration_;

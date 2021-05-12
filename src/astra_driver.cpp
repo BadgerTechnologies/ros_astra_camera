@@ -361,7 +361,9 @@ bool AstraDriver::switchIRCameraCb(astra_camera::SwitchIRCameraRequest& req, ast
 
 void AstraDriver::configCb(Config &config, uint32_t level)
 {
-  if (device_->getDeviceTypeNo() == OB_STEREO_S_NO)
+  OB_DEVICE_NO device_num = device_->getDeviceTypeNo();
+
+  if (device_num == OB_STEREO_S_NO || device_num == OB_STEREO_S_U3_NO)
   {
     if (config.depth_mode != 13 && config.depth_mode != 14)
     {
@@ -373,7 +375,7 @@ void AstraDriver::configCb(Config &config, uint32_t level)
     }
     device_->switchIRCamera(0);
   }
-  else if (device_->getDeviceTypeNo() == OB_EMBEDDED_S_NO)
+  else if (device_num == OB_EMBEDDED_S_NO)
   {
     if (config.depth_mode != 13 && config.depth_mode != 17)
     {

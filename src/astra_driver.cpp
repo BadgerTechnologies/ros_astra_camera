@@ -420,6 +420,11 @@ void AstraDriver::configCb(Config &config, uint32_t level)
     }
   }
 
+  if (!config_init_ || config.disable_ldp != old_config_.disable_ldp)
+  {
+    device_->setLDP(!config.disable_ldp);
+  }
+
   depth_ir_offset_x_ = config.depth_ir_offset_x;
   depth_ir_offset_y_ = config.depth_ir_offset_y;
   z_offset_mm_ = config.z_offset_mm;

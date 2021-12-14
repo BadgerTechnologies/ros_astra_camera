@@ -268,16 +268,6 @@ void AstraDevice::setLDP(bool enable)
   {
     openni_device_->setProperty(XN_MODULE_PROPERTY_LDP_ENABLE, (uint8_t *)&enable_, 4);
   }
-  else
-  {
-    boost::shared_ptr<openni::VideoStream> depth_stream = getDepthVideoStream();
-    boost::shared_ptr<openni::VideoStream> ir_stream = getIRVideoStream();
-    depth_stream->stop();
-    ir_stream->stop();
-    openni_device_->setProperty(openni::OBEXTENSION_ID_LDP_EN, (uint8_t *)&enable_, 4);
-    depth_stream->start();
-    ir_stream->start();
-  }
 }
 
 void AstraDevice::switchIRCamera(int cam)

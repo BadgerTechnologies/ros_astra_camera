@@ -828,7 +828,20 @@ void OBCameraNode::reconfigureCallback(const AstraConfig& config, uint32_t level
   camera_params_.reset();
   getCameraParams();
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  // Only try to set LDP for devices that have one. For Badger, we only have
+  // mini/mini pro and Stereo S/Stereo S U3. Of these, only the Stereo S U3 has
+  // LDP. Attempting to set LDP on the mini causes issues w/ the RGB stream, so
+  // don't do it. Be sure to disable/enable LDP here when the streams are off.
+  auto pid = device_->getDeviceInfo().getUsbProductId();
+  if (pid == STEREO_S_U3_DEPTH_PID)
+  {
+    device_->setProperty(XN_MODULE_PROPERTY_LDP_ENABLE, !config.disable_ldp);
+  }
   startStreams();
+  // Apply emitter state after starting the video streams as turning the
+  // streams on turns the emitter on internally no matter what the previous
+  // state was.
+  device_->setProperty(XN_MODULE_PROPERTY_EMITTER_STATE, !config.disable_emitter);
   ROS_INFO("Configuration applied");
 }
 

@@ -17,6 +17,7 @@ find_package(catkin REQUIRED
   image_geometry
   image_transport
   message_generation
+  nodelet
   roscpp
   sensor_msgs
   std_srvs
@@ -92,6 +93,7 @@ catkin_package(
   image_geometry
   image_transport
   message_runtime
+  nodelet
   roscpp
   sensor_msgs
   tf2
@@ -113,6 +115,7 @@ link_directories(${ORBBEC_OPENNI2_REDIST}
   ${OpenCV_LIBS})
 
 add_library(${PROJECT_NAME}
+  src/astra_camera_nodelet.cpp
   src/point_cloud_proc/point_cloud_xyz.cpp
   src/point_cloud_proc/point_cloud_xyzrgb.cpp
   src/d2c_viewer.cpp
@@ -234,6 +237,10 @@ install(DIRECTORY ${ORBBEC_OPENNI2_REDIST}/OpenNI2
 
 install(DIRECTORY include/astra_camera
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}/astra_camera
+  )
+
+install(FILES astra_nodelets.xml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
   )
 
 install(FILES 56-orbbec-usb.rules

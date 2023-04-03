@@ -16,6 +16,7 @@
   <depend>libusb-1.0-dev</depend>
   <depend>message_generation</depend>
   <depend>message_runtime</depend>
+  <depend>nodelet</depend>
   <depend>rgbd_launch</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
@@ -24,4 +25,8 @@
   <depend>tf2</depend>
   <depend>message_filters</depend>
   <depend>camera_info_manager</depend>
+
+  <export>
+    <nodelet plugin="${prefix}/astra_nodelets.xml"/>
+  </export>
 </package>

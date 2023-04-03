@@ -191,9 +191,12 @@ void OBCameraNodeFactory::onDeviceConnected(const openni::DeviceInfo* device_inf
         }
       }
     } else {
-      ROS_INFO_STREAM("Device connected: "
+      ROS_ERROR_STREAM("Device connected: "
                       << device_info->getName() << " serial number: " << serial_number
                       << " does not match expected serial number: " << serial_number_);
+      // Disconnect the device. A mismatch means the correct node won't be able to connect.
+      device.reset();
+      cleanUpSharedMemory();
     }
   }
   if (!device_connected_) {

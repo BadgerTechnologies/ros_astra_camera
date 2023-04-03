@@ -69,6 +69,7 @@ class OBCameraNodeFactory {
   ros::WallTimer check_connection_timer_;
   std::atomic_bool device_connected_{false};
   size_t device_num_ = 1;
+  std::string lock_file_name_ = "";
   long connection_delay_ = 100;
   std::string oni_log_level_str_ = "none";
   bool oni_log_to_console_ = false;

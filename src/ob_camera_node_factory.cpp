@@ -13,6 +13,7 @@
 #include "astra_camera/ob_camera_node_factory.h"
 
 #include <fcntl.h>
+#include <sys/file.h>
 
 #include <boost/filesystem.hpp>
 
@@ -67,6 +68,8 @@ void OBCameraNodeFactory::init() {
   use_uvc_camera_ = nh_private_.param<bool>("use_uvc_camera", false);
   serial_number_ = nh_private_.param<std::string>("serial_number", "");
   device_num_ = nh_private_.param<int>("device_num", 1);
+  lock_file_name_ = nh_private_.param<std::string>("lockfile", "");
+
   connection_delay_ = nh_private_.param<int>("connection_delay", 100);
   auto disconnected_cb = [this](const openni::DeviceInfo* device_info) {
     this->onDeviceDisconnected(device_info);
@@ -256,10 +259,37 @@ void OBCameraNodeFactory::checkConnectionTimer() {
 void OBCameraNodeFactory::queryDevice() {
   while (is_alive_ && ros::ok()) {
     if (!device_connected_) {
+      int lock_file_fd = -1;
+      if (lock_file_name_.size()) {
+        lock_file_fd = open(lock_file_name_.c_str(), O_RDWR | O_CREAT, 0666);
+        if (lock_file_fd == -1) {
+          ROS_ERROR_STREAM("Lock file \"" << lock_file_name_ << "\" could not be opened: " << strerror(errno));
+        } else {
+          int flock_rc;
+          do {
+            flock_rc = flock(lock_file_fd, LOCK_EX);
+          } while (flock_rc == -1 && errno == EINTR);
+          if (flock_rc == -1) {
+            ROS_ERROR_STREAM("Unable to lock file \"" << lock_file_name_ << "\"!: " << strerror(errno));
+            close(lock_file_fd);
+            lock_file_fd = -1;
+          } else {
+            ROS_INFO_STREAM("File locked for camera " << serial_number_);
+          }
+        }
+      }
       ROS_INFO_STREAM_THROTTLE(1, "Query device");
       auto device_info_list = context_->queryDeviceList();
       for (auto& device_info : device_info_list) {
         onDeviceConnected(&device_info);
+      }
+      if (lock_file_fd != -1) {
+        if (flock(lock_file_fd, LOCK_UN) < 0) {
+          ROS_ERROR_STREAM("Cannot unlock file \"" << lock_file_name_ << "\"!: " << strerror(errno));
+        } else {
+          ROS_INFO_STREAM("File unlocked for camera " << serial_number_);
+        }
+        close(lock_file_fd);
       }
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));

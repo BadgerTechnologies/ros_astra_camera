@@ -122,6 +122,12 @@ double OBCameraNode::getFocalLength(const stream_index_pair& stream_index, int y
   if (stream == nullptr) {
     return 0.0;
   }
+  // Adjust the y_resolution for SXGA (1280x1024) which is an oddball. See the
+  // note on SXGA below for justification. The only supported video mode with
+  // height 1024 is SXGA, so it is OK to only test y_resolution here.
+  if (y_resolution == 1024) {
+    y_resolution = 960;
+  }
   return static_cast<double>(y_resolution) / (2 * tan(stream->getVerticalFieldOfView() / 2));
 }
 

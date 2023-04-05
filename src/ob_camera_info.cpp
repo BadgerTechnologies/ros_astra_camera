@@ -290,9 +290,24 @@ sensor_msgs::CameraInfo OBCameraNode::getDefaultCameraInfo(int width, int height
   info.K[0] = info.K[4] = f;
 
   info.K[2] = (static_cast<double>(width) / 2) - 0.5;
-  // Aspect ratio for the camera center on Astra (and other devices?) is 4/3
-  // This formula keeps the principal point the same in VGA and SXGA modes
-  info.K[5] = (static_cast<double>(width) * (3. / 8.)) - 0.5;
+  // Use half the height for the center point to correctly handle 4:3 and 16:9
+  // video modes. Adjust the height for SXGA (1280x1024) which is an oddball.
+  // SXGA is only useful on 4:3 devices, and in such cases keep the default
+  // info consistent by assuming the images always align at the top corner.
+  // In reality some devices (at least the Mini) run natively in 1280x1024 and
+  // the other modes chop off the bottom data, which means the default center
+  // point is not correct, and should really be the center point of SXGA
+  // adjusted. However, for legacy reasons, pretend that the default center
+  // point of the 4:3 modes is correct, as adjusting that assumption now would
+  // ruin existing extrensics calibrations which used the faulty intrensic
+  // center point. This only affects devices which do not store true intrensics
+  // anyway, which are legacy devices such as the Mini (whose stored intrensics
+  // are garbage so we ignore them)
+  if (width == 1280 && height == 1024)
+  {
+    height = 960;
+  }
+  info.K[5] = (static_cast<double>(height) / 2) - 0.5;
   info.K[8] = 1.0;
 
   // No separate rectified image plane, so R = I

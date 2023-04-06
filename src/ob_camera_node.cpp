@@ -634,6 +634,7 @@ void OBCameraNode::onNewFrameCallback(const openni::VideoFrameRef& frame,
   }
 
   camera_info.header.stamp = timestamp;
+  camera_info.header.frame_id = image_msg.header.frame_id;
   camera_info_publishers_.at(stream_index).publish(camera_info);
 
   if (save_images_[stream_index]) {

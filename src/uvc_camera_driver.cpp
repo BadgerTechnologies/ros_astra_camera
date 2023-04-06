@@ -115,13 +115,13 @@ UVCCameraDriver::UVCCameraDriver(ros::NodeHandle& nh, ros::NodeHandle& nh_privat
   camera_name_ = nh_private.param<std::string>("camera_name", "camera");
   config_.frame_id = camera_name_ + "_color_frame";
   config_.optical_frame_id = camera_name_ + "_color_optical_frame";
-  camera_info_publisher_ = nh_.advertise<sensor_msgs::CameraInfo>("color/camera_info", 1, true);
+  camera_info_publisher_ = nh_.advertise<sensor_msgs::CameraInfo>("rgb/camera_info", 1, true);
   color_info_uri_ = nh_private.param<std::string>("color_info_uri", "");
   color_info_manager_ =
       std::make_shared<camera_info_manager::CameraInfoManager>(nh_, "rgb_camera", color_info_uri_);
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
   image_publisher_ = nh_.advertise<sensor_msgs::Image>(
-      "color/image_raw", 10, boost::bind(&UVCCameraDriver::imageSubscribedCallback, this),
+      "rgb/image_raw", 10, boost::bind(&UVCCameraDriver::imageSubscribedCallback, this),
       boost::bind(&UVCCameraDriver::imageUnsubscribedCallback, this));
   setupCameraControlService();
   openCamera();

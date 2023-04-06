@@ -139,7 +139,9 @@ void OBCameraNode::setupConfig() {
   image_format_[DEPTH] = CV_16UC1;
   encoding_[DEPTH] = sensor_msgs::image_encodings::TYPE_16UC1;
 
-  stream_name_[COLOR] = "color";
+//  stream_name_[COLOR] = "color";
+  // Badger: restore the old name "rgb" for backwards compatibility
+  stream_name_[COLOR] = "rgb";
   unit_step_size_[COLOR] = 3;
   format_[COLOR] = openni::PIXEL_FORMAT_RGB888;
   image_format_[COLOR] = CV_8UC3;

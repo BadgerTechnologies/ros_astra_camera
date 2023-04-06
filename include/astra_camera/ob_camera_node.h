@@ -215,6 +215,7 @@ class OBCameraNode {
   openni::DeviceInfo device_info_{};
   std::atomic_bool is_running_{false};
   std::map<stream_index_pair, bool> enable_;
+  bool rgb_preferred_;
   std::map<stream_index_pair, bool> stream_started_;
   std::map<stream_index_pair, int> width_;
   std::map<stream_index_pair, int> height_;

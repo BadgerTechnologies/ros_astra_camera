@@ -206,12 +206,6 @@ void OBCameraNode::setupFrameCallback() {
 }
 
 void OBCameraNode::setupVideoMode() {
-  if (!use_uvc_camera_ && enable_[INFRA1] && enable_[COLOR]) {
-    ROS_WARN_STREAM(
-        "Infrared and Color streams are enabled. "
-        "Infrared stream will be disabled.");
-    enable_[INFRA1] = false;
-  }
   for (const auto& stream_index : IMAGE_STREAMS) {
     supported_video_modes_[stream_index] = std::vector<openni::VideoMode>();
     if (device_->hasSensor(stream_index.first) && enable_[stream_index]) {
@@ -300,6 +294,19 @@ void OBCameraNode::startStream(const stream_index_pair& stream_index) {
   auto pid = device_->getDeviceInfo().getUsbProductId();
   if (pid == ASTRA_PRO_DEPTH_PID && stream_index == COLOR) {
     return;
+  }
+  if (!use_uvc_camera_ && enable_[INFRA1] && enable_[COLOR]) {
+    if (stream_index == INFRA1 && rgb_preferred_) {
+      ROS_INFO_STREAM(
+          "Infrared and Color streams are enabled. "
+          "Infrared stream will not be enabled as rgb_preferred is set.");
+      return;
+    } else if(stream_index == COLOR && !rgb_preferred_) {
+      ROS_INFO_STREAM(
+          "Infrared and Color streams are enabled. "
+          "Color stream will not be enabled as rgb_preferred is not set.");
+      return;
+    }
   }
   if (stream_started_[stream_index]) {
     ROS_WARN_STREAM("Stream " << stream_name_[stream_index] << " is already started.");
@@ -759,6 +766,7 @@ void OBCameraNode::reconfigureCallback(const AstraConfig& config, uint32_t level
     ROS_WARN("No color sensor found, depth align will be disabled");
     depth_align_ = false;
   }
+  rgb_preferred_ = config.rgb_preferred;
   color_depth_synchronization_ = config.color_depth_synchronization;
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
   stopStreams();

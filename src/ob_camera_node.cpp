@@ -390,7 +390,7 @@ void OBCameraNode::getParameters() {
     param_name = stream_name_[stream_index] + "_fps";
     fps_[stream_index] = nh_private_.param<int>(param_name, IMAGE_FPS);
     param_name = "enable_" + stream_name_[stream_index];
-    enable_[stream_index] = nh_private_.param<bool>(param_name, false);
+    enable_[stream_index] = nh_private_.param<bool>(param_name, true);
   }
   for (const auto& stream_index : IMAGE_STREAMS) {
     depth_aligned_frame_id_[stream_index] = optical_frame_id_[COLOR];

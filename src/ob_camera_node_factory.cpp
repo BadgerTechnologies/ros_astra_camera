@@ -195,7 +195,7 @@ void OBCameraNodeFactory::onDeviceConnected(const openni::DeviceInfo* device_inf
   }
   if (!device_connected_) {
     ROS_INFO_STREAM("Device: " << device_info->getUri() << " is not connected");
-    device->close();
+    device.reset();
     ROS_INFO_STREAM("OBCameraNodeFactory::onDeviceConnected close done.");
   }
 }

@@ -209,8 +209,8 @@ sensor_msgs::CameraInfo OBCameraNode::getDepthCameraInfo() {
   }
   camera_info.K[2] -= depth_ir_x_offset_ * scaling;
   camera_info.K[5] -= depth_ir_y_offset_ * scaling;
-  camera_info.K[2] -= depth_ir_x_offset_ * scaling;
-  camera_info.K[6] -= depth_ir_y_offset_ * scaling;
+  camera_info.P[2] -= depth_ir_x_offset_ * scaling;
+  camera_info.P[6] -= depth_ir_y_offset_ * scaling;
 
   // TODO: Could put this in projector frame so as to encode the baseline in P[3]
   return camera_info;

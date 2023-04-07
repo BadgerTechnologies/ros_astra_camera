@@ -18,7 +18,15 @@ void DeviceConnectedCallback(const openni::DeviceInfo* device_info) {
   auto device = std::make_shared<openni::Device>();
   auto uri = device_info->getUri();
   std::cout << "URI: " << uri << std::endl;
-  device->open(uri);
+  auto rc = device->open(uri);
+  if (rc != openni::STATUS_OK) {
+    if (errno == EBUSY) {
+      ROS_WARN_STREAM("Unable to open device: device is already in use");
+    } else {
+      ROS_WARN_STREAM("Unable to open device, rc: " << rc << ", errno: " << errno);
+    }
+    return;
+  }
   char serial_number[64];
   int data_size = sizeof(serial_number);
   device->getProperty(openni::OBEXTENSION_ID_SERIALNUMBER, serial_number, &data_size);

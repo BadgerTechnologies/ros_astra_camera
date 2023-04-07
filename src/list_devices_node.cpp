@@ -13,11 +13,15 @@
 
 #include "astra_camera/ob_context.h"
 
-void DeviceConnectedCallback(const openni::DeviceInfo* device_info) {
+void DeviceConnectedCallback(const openni::DeviceInfo* device_info, int i) {
+  std::cout << "Device #" << i << ":" << std::endl;
   std::cout << "Device connected: " << device_info->getName() << std::endl;
   auto device = std::make_shared<openni::Device>();
   auto uri = device_info->getUri();
-  std::cout << "URI: " << uri << std::endl;
+  std::cout << "Uri: " << uri << " (Vendor ID: " << std::hex
+	  << device_info->getUsbVendorId() << ", Product ID: "
+	  << device_info->getUsbProductId() << ")"
+	  << std::endl;
   auto rc = device->open(uri);
   if (rc != openni::STATUS_OK) {
     if (errno == EBUSY) {
@@ -25,6 +29,8 @@ void DeviceConnectedCallback(const openni::DeviceInfo* device_info) {
     } else {
       ROS_WARN_STREAM("Unable to open device, rc: " << rc << ", errno: " << errno);
     }
+    // Some existing tools figure out there is an error when serial_number is empty
+    std::cout << "Serial number: " << std::endl;
     return;
   }
   char serial_number[64];
@@ -41,8 +47,9 @@ int main() {
   };
   auto context = std::make_unique<astra_camera::Context>(disconnected_cb);
   auto device_list = context->queryDeviceList();
+  int i=0;
   for (auto& device_info : device_list) {
-    DeviceConnectedCallback(&device_info);
+    DeviceConnectedCallback(&device_info, i++);
   }
   openni::OpenNI::shutdown();
   return 0;

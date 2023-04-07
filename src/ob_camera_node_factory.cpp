@@ -294,6 +294,10 @@ void OBCameraNodeFactory::queryDevice() {
         }
         close(lock_file_fd);
       }
+      if (!device_connected_) {
+        ROS_ERROR_STREAM("No device found. Request shutdown to allow system to restart service");
+        ros::shutdown();
+      }
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }

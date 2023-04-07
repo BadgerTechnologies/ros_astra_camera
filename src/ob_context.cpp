@@ -35,7 +35,7 @@ std::vector<openni::DeviceInfo> Context::queryDeviceList() {
       std::lock_guard<decltype(mutex_)> lock(mutex_);
       device_info_list_[device_info_list[i].getUri()] = device_info_list[i];
     }
-    first_time_query_ = false;
+//    first_time_query_ = false;
   } else {
     std::lock_guard<decltype(mutex_)> lock(mutex_);
     for (auto& device_info : device_info_list_) {

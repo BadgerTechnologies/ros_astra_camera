@@ -766,6 +766,8 @@ void OBCameraNode::reconfigureCallback(const AstraConfig& config, uint32_t level
     ROS_WARN("No color sensor found, depth align will be disabled");
     depth_align_ = false;
   }
+  depth_ir_x_offset_ = config.depth_ir_offset_x;
+  depth_ir_y_offset_ = config.depth_ir_offset_y;
   rgb_preferred_ = config.rgb_preferred;
   color_depth_synchronization_ = config.color_depth_synchronization;
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);

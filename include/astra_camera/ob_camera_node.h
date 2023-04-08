@@ -210,6 +210,7 @@ class OBCameraNode {
   std::shared_ptr<UVCCameraDriver> uvc_camera_driver_ = nullptr;
   std::string camera_name_ = "camera";
   std::unique_ptr<ReconfigureServer> reconfigure_server_ = nullptr;
+  std::unique_ptr<AstraConfig> last_config_ = nullptr;
   std::map<int, openni::VideoMode> video_modes_lookup_table_;
   bool use_uvc_camera_ = false;
   openni::DeviceInfo device_info_{};

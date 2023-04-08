@@ -769,6 +769,29 @@ void OBCameraNode::reconfigureCallback(const AstraConfig& config, uint32_t level
     ROS_WARN_STREAM("Dynamic reconfigure is disabled");
     return;
   }
+  // Ignore any reconfigure with config identical to last config.
+  // There is no need to do anything, such as stopping video streams, etc.,
+  // if the config has not changed. Only check the parts of config that are
+  // actually used, as there is no dynamic reconfigure interface to compare
+  // configuration objects.
+  if (last_config_ &&
+      last_config_->ir_mode == config.ir_mode &&
+      last_config_->color_mode == config.color_mode &&
+      last_config_->depth_mode == config.depth_mode &&
+      last_config_->depth_align == config.depth_align &&
+      last_config_->depth_ir_offset_x == config.depth_ir_offset_x &&
+      last_config_->depth_ir_offset_y == config.depth_ir_offset_y &&
+      last_config_->rgb_preferred == config.rgb_preferred &&
+      last_config_->color_depth_synchronization == config.color_depth_synchronization &&
+      last_config_->disable_ldp == config.disable_ldp &&
+      last_config_->disable_emitter == config.disable_emitter)
+  {
+    ROS_INFO_STREAM("configuration is identical, skipping");
+    return;
+  }
+  // Save a copy of the config to check for identical reconfigure requests.
+  last_config_.reset(new AstraConfig(config));
+
   auto json_data = nlohmann::json::parse(config.edited_video_modes);
   auto edited_video_modes = json_data["enum"].get<std::vector<nlohmann::json>>();
   video_modes_lookup_table_.clear();

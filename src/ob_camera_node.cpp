@@ -769,11 +769,6 @@ void OBCameraNode::reconfigureCallback(const AstraConfig& config, uint32_t level
     ROS_WARN_STREAM("Dynamic reconfigure is disabled");
     return;
   }
-  // Ignore any reconfigure with config identical to last config.
-  // There is no need to do anything, such as stopping video streams, etc.,
-  // if the config has not changed. Only check the parts of config that are
-  // actually used, as there is no dynamic reconfigure interface to compare
-  // configuration objects.
   if (last_config_ &&
       last_config_->ir_mode == config.ir_mode &&
       last_config_->color_mode == config.color_mode &&
@@ -783,10 +778,25 @@ void OBCameraNode::reconfigureCallback(const AstraConfig& config, uint32_t level
       last_config_->depth_ir_offset_y == config.depth_ir_offset_y &&
       last_config_->rgb_preferred == config.rgb_preferred &&
       last_config_->color_depth_synchronization == config.color_depth_synchronization &&
-      last_config_->disable_ldp == config.disable_ldp &&
-      last_config_->disable_emitter == config.disable_emitter)
+      last_config_->disable_ldp == config.disable_ldp)
   {
-    ROS_INFO_STREAM("configuration is identical, skipping");
+    if (last_config_->disable_emitter != config.disable_emitter)
+    {
+      // If only emitter state changed, apply and quit, no need to close and
+      // reopen the streams.
+      ROS_INFO_STREAM("configuration is identical except emitter state, apply emitter state change");
+      device_->setProperty(XN_MODULE_PROPERTY_EMITTER_STATE, !config.disable_emitter);
+      last_config_->disable_emitter = config.disable_emitter;
+    }
+    else
+    {
+      // Ignore any reconfigure with config identical to last config.
+      // There is no need to do anything, such as stopping video streams, etc.,
+      // if the config has not changed. Only check the parts of config that are
+      // actually used, as there is no dynamic reconfigure interface to compare
+      // configuration objects.
+      ROS_INFO_STREAM("configuration is identical, skipping");
+    }
     return;
   }
   // Save a copy of the config to check for identical reconfigure requests.

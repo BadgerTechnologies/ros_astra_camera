@@ -131,11 +131,17 @@ UVCCameraDriver::UVCCameraDriver(ros::NodeHandle& nh, ros::NodeHandle& nh_privat
 
 UVCCameraDriver::~UVCCameraDriver() {
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
-  uvc_close(device_handle_);
+  if (device_handle_) {
+    uvc_close(device_handle_);
+  }
   device_handle_ = nullptr;
-  uvc_unref_device(device_);
+  if (device_) {
+    uvc_unref_device(device_);
+  }
   device_ = nullptr;
-  uvc_exit(ctx_);
+  if (ctx_) {
+    uvc_exit(ctx_);
+  }
   ctx_ = nullptr;
   if (frame_buffer_) {
     uvc_free_frame(frame_buffer_);
@@ -184,6 +190,7 @@ void UVCCameraDriver::openCamera() {
                 uvc_get_device_address(device_), uvc_strerror(err), err);
     }
     uvc_unref_device(device_);
+    device_ = nullptr;
     return;
   }
   uvc_set_status_callback(device_handle_, &UVCCameraDriver::autoControlsCallbackWrapper, this);

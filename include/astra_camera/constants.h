@@ -95,6 +95,7 @@ const std::string DEFAULT_D2C_MODE = "sw";  // sw = software mode, hw=hardware m
 const float ROS_DEPTH_SCALE = 0.001;
 const int TIME_FILTER_LENGTH = 10;
 
+constexpr static uint32_t ASTRA_MINI_PID = 0x0404;
 constexpr static uint32_t STEREO_S_DEPTH_PID = 0x0608;
 constexpr static uint32_t STEREO_S_U3_DEPTH_PID = 0x0614;
 constexpr static uint32_t DABAI_DCW_RGB_PID = 0x0559;

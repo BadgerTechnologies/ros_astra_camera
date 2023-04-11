@@ -18,6 +18,12 @@ OBCameraParams OBCameraNode::getCameraParams() {
     return camera_params_.value();
   }
   auto pid = device_info_.getUsbProductId();
+  if (pid == ASTRA_MINI_PID) {
+    // Camera info stored in mini's is junk, defaults are much better.
+    // Return an invalid config.
+    OBCameraParams params = {std::nanf("")};
+    return params;
+  }
   if (pid != DABAI_DCW_DEPTH_PID && pid != DABAI_DW_PID && pid != GEMINI_E_DEPTH_PID &&
       pid != GEMINI_E_LITE_DEPTH_PID && pid != DABAI_MAX_PID) {
     OBCameraParams params;

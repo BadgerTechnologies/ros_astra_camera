@@ -121,7 +121,7 @@ void OBCameraNode::init() {
     } else {
       int width = width_[stream_index];
       int height = height_[stream_index];
-      double f = getFocalLength(stream_index, width);
+      double f = getFocalLength(stream_index, height);
       camera_info = getIRCameraInfo(width, height, f);
     }
 
@@ -629,7 +629,7 @@ void OBCameraNode::onNewFrameCallback(const openni::VideoFrameRef& frame,
   } else if (stream_index == COLOR) {
     camera_info = getColorCameraInfo();
   } else if (stream_index == INFRA1 || stream_index == INFRA2) {
-    double f = getFocalLength(stream_index, width);
+    double f = getFocalLength(stream_index, height);
     camera_info = getIRCameraInfo(width, height, f);
   }
 

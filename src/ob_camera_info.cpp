@@ -125,6 +125,12 @@ double OBCameraNode::getFocalLength(const stream_index_pair& stream_index, int y
     return 0.0;
   }
   auto stream = streams_.at(stream_index);
+  // Astra mini's report bad IR focal length which will result in nan.
+  // Replace with the correct info from the depth stream.
+  auto pid = device_info_.getUsbProductId();
+  if (stream_index == INFRA1 && pid == ASTRA_MINI_PID) {
+    stream = streams_.at(DEPTH);
+  }
   if (stream == nullptr) {
     return 0.0;
   }

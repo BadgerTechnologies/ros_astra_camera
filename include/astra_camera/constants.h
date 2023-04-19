@@ -105,6 +105,7 @@ constexpr static uint32_t DABAI_DC1_PID = 0x0657;
 constexpr static uint32_t DABAI_D1_PID = 0x0658;
 constexpr static uint32_t DABAI_DCW_DEPTH_PID = 0x0659;
 constexpr static uint32_t DABAI_DW_PID = 0x065a;
+constexpr static uint32_t ASTRA_MINI_PRO_PID = 0x065b;
 constexpr static uint32_t DEEYEA_UVC_PID = 0x050b;
 constexpr static uint32_t GEMIN_E_UVC_PID = 0x055c;
 constexpr static uint32_t GEMINI_E_DEPTH_PID = 0x065c;

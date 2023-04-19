@@ -13,6 +13,28 @@
 
 namespace astra_camera {
 
+static inline std::string decodeUsbProductId(int pid)
+{
+  switch (pid)
+  {
+    case ASTRA_MINI_PID:
+      return "Astra Mini";
+    case ASTRA_MINI_PRO_PID:
+      return "Astra Mini Pro";
+    case STEREO_S_DEPTH_PID:
+      return "Astra Stereo S";
+    case STEREO_S_U3_DEPTH_PID:
+      return "Astra Stereo S U3";
+    default:
+      {
+        std::stringstream ss;
+        ss << "Astra (Product ID 0x" << std::hex << std::setw(4)
+            << static_cast<uint16_t>(pid) << ")";
+        return ss.str();
+      }
+  }
+}
+
 static inline constexpr const char* decodeFWVer(XnFWVer v)
 {
   switch (v)
@@ -576,6 +598,8 @@ bool OBCameraNode::getDeviceInfoCallback(GetDeviceInfoRequest& request,
   response.info.name = device_info.getName();
   response.info.pid = device_info.getUsbProductId();
   response.info.vid = device_info.getUsbVendorId();
+  // Badger: use more descriptive name from product ID
+  response.info.name = decodeUsbProductId(response.info.pid);
   char serial_number[64];
   int data_size = sizeof(serial_number);
   auto rc = device_->getProperty(openni::OBEXTENSION_ID_SERIALNUMBER, serial_number, &data_size);

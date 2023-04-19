@@ -13,6 +13,108 @@
 
 namespace astra_camera {
 
+static inline constexpr const char* decodeFWVer(XnFWVer v)
+{
+  switch (v)
+  {
+    default:
+    case XN_SENSOR_FW_VER_UNKNOWN:
+      return "Unknown";
+    case XN_SENSOR_FW_VER_0_17:
+      return "V0.17";
+    case XN_SENSOR_FW_VER_1_1:
+      return "V1.1";
+    case XN_SENSOR_FW_VER_1_2:
+      return "V1.2";
+    case XN_SENSOR_FW_VER_3_0:
+      return "V3.0";
+    case XN_SENSOR_FW_VER_4_0:
+      return "V4.0";
+    case XN_SENSOR_FW_VER_5_0:
+      return "V5.0";
+    case XN_SENSOR_FW_VER_5_1:
+      return "V5.1";
+    case XN_SENSOR_FW_VER_5_2:
+      return "V5.2";
+    case XN_SENSOR_FW_VER_5_3:
+      return "V5.3";
+    case XN_SENSOR_FW_VER_5_4:
+      return "V5.4";
+    case XN_SENSOR_FW_VER_5_5:
+      return "V5.5";
+    case XN_SENSOR_FW_VER_5_6:
+      return "V5.6";
+    case XN_SENSOR_FW_VER_5_7:
+      return "V5.7";
+    case XN_SENSOR_FW_VER_5_8:
+      return "V5.8";
+    case XN_SENSOR_FW_VER_5_9:
+      return "V5.9";
+  }
+}
+
+static inline constexpr const char* decodeHWVer(XnHWVer v)
+{
+  switch (v)
+  {
+    default:
+    case XN_SENSOR_HW_VER_UNKNOWN:
+      return "Unknown";
+    case XN_SENSOR_HW_VER_FPDB_10:
+      return "FPDB1.0";
+    case XN_SENSOR_HW_VER_CDB_10:
+      return "CDB1.0";
+    case XN_SENSOR_HW_VER_RD_3:
+      return "RD3.0";
+    case XN_SENSOR_HW_VER_RD_5:
+      return "RD5.0";
+    case XN_SENSOR_HW_VER_RD1081:
+      return "RD1081";
+    case XN_SENSOR_HW_VER_RD1082:
+      return "RD1082";
+    case XN_SENSOR_HW_VER_RD109:
+      return "RD109";
+  }
+}
+
+static inline constexpr const char* decodeChipVer(XnChipVer v)
+{
+  switch (v)
+  {
+    default:
+    case XN_SENSOR_CHIP_VER_UNKNOWN:
+      return "Unknown";
+    case XN_SENSOR_CHIP_VER_PS1000:
+      return "PS1000";
+    case XN_SENSOR_CHIP_VER_PS1080:
+      return "PS1080";
+    case XN_SENSOR_CHIP_VER_PS1080A6:
+      return "PS1080A6";
+    case XN_SENSOR_CHIP_VER_MX6000:
+      return "MX6000";
+    case XN_SENSOR_CHIP_VER_DUAL_MX6000:
+      return "Dual MX6000";
+  }
+}
+
+static inline constexpr const char* decodeSensorVer(XnSensorVer v)
+{
+  switch (v)
+  {
+    default:
+    case XN_SENSOR_VER_UNKNOWN:
+      return "Unknown";
+    case XN_SENSOR_VER_2_0:
+      return "V2.0";
+    case XN_SENSOR_VER_3_0:
+      return "V3.0";
+    case XN_SENSOR_VER_4_0:
+      return "V4.0";
+    case XN_SENSOR_VER_5_0:
+      return "V5.0";
+  }
+}
+
 void OBCameraNode::setupCameraCtrlServices() {
   for (const auto& stream_index : IMAGE_STREAMS) {
     if (!enable_[stream_index] || !device_->hasSensor(stream_index.first)) {
@@ -482,6 +584,41 @@ bool OBCameraNode::getDeviceInfoCallback(GetDeviceInfoRequest& request,
   } else {
     response.info.serial_number = "";
   }
+  XnVersions device_version;
+  data_size = sizeof(device_version);
+  rc = device_->getProperty(XN_MODULE_PROPERTY_VERSION, &device_version, &data_size);
+  if (rc == openni::STATUS_OK) {
+    std::stringstream fw_ss;
+    fw_ss << "V" << static_cast<int>(device_version.nMajor)
+        << "." << static_cast<int>(device_version.nMinor)
+        << "." << static_cast<int>(device_version.nBuild);
+    response.info.firmware_version = fw_ss.str();
+    std::stringstream hw_ss;
+    hw_ss << "Chip: 0x" << std::hex << std::setw(8) << std::setfill('0')
+        << device_version.nChip
+        << "; FPGA: 0x" << std::hex << std::setw(0)
+        << device_version.nFPGA
+        << "; System: 0x" << std::hex << std::setw(0)
+        << device_version.nSystemVersion
+        << "; FWBaseLine: " << decodeFWVer(device_version.FWVer)
+        << "; Board: " << decodeHWVer(device_version.HWVer)
+        << "; ChipType: " << decodeChipVer(device_version.ChipVer)
+        << "; SensorVer: " << decodeSensorVer(device_version.SensorVer);
+    response.info.hardware_version = hw_ss.str();
+  } else {
+    response.info.firmware_version = "";
+    response.info.hardware_version = "";
+  }
+  char buffer[128] = {0};
+  data_size = sizeof(buffer);
+  rc = device_->getProperty(XN_MODULE_PROPERTY_SENSOR_PLATFORM_STRING, buffer, &data_size);
+  if (rc == openni::STATUS_OK) {
+    if (response.info.firmware_version.size() > 0) {
+      response.info.firmware_version += "-";
+    }
+    response.info.firmware_version += buffer;
+  }
+
   return true;
 }
 

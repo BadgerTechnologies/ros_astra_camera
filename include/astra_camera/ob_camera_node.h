@@ -197,7 +197,7 @@ class OBCameraNode {
   boost::optional<openni::VideoMode> lookupVideoModeFromDynConfig(int index);
 
   // NOTE: This interface only for testing purposes.
-  void reconfigureCallback(const AstraConfig& config, uint32_t level);
+  void reconfigureCallback(AstraConfig& config, uint32_t level);
 
   void sendKeepAlive(const ros::TimerEvent& event);
 

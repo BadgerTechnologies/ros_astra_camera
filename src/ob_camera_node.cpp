@@ -88,7 +88,7 @@ void OBCameraNode::init() {
   init_ir_exposure_ = getIRExposure();
   if (enable_reconfigure_) {
     reconfigure_server_ = std::make_unique<ReconfigureServer>(nh_private_);
-    reconfigure_server_->setCallback([this](const AstraConfig& config, uint32_t level) {
+    reconfigure_server_->setCallback([this](AstraConfig& config, uint32_t level) {
       this->reconfigureCallback(config, level);
     });
   }
@@ -762,7 +762,7 @@ boost::optional<openni::VideoMode> OBCameraNode::lookupVideoModeFromDynConfig(in
   return {};
 }
 
-void OBCameraNode::reconfigureCallback(const AstraConfig& config, uint32_t level) {
+void OBCameraNode::reconfigureCallback(AstraConfig& config, uint32_t level) {
   (void)level;
   ROS_INFO_STREAM("Received configuration");
   if (!enable_reconfigure_) {

@@ -876,6 +876,12 @@ void OBCameraNode::reconfigureCallback(AstraConfig& config, uint32_t level) {
   color_depth_synchronization_ = config.color_depth_synchronization;
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
   stopStreams();
+  for (const auto& stream_index : IMAGE_STREAMS) {
+    // Badger: reset stream enable_ in case it was disabled due to a previous
+    // bad video mode config.
+    std::string param_name = "enable_" + stream_name_[stream_index];
+    enable_[stream_index] = nh_private_.param<bool>(param_name, true);
+  }
   setupVideoMode();
   camera_params_.reset();
   getCameraParams();

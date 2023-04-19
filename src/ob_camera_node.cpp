@@ -769,6 +769,25 @@ void OBCameraNode::reconfigureCallback(AstraConfig& config, uint32_t level) {
     ROS_WARN_STREAM("Dynamic reconfigure is disabled");
     return;
   }
+  {
+    // Badger: enforce only valid modes for Stereo S/S U3 devices.
+    // This really shouldn't be necessary, but it seems some users of dynamic
+    // reconfigure always attempt to set the depth mode and ir mode supported by
+    // Astra Mini, which will not work on Stereo S/S U3. Until such users are
+    // found and fixed, continue providing the legacy behavior.
+    auto pid = device_->getDeviceInfo().getUsbProductId();
+    if (pid == STEREO_S_DEPTH_PID || pid == STEREO_S_U3_DEPTH_PID)
+    {
+      if (config.depth_mode != Astra_640_400_30 && config.depth_mode != Astra_320_200_30)
+      {
+        config.depth_mode = Astra_640_400_30;
+      }
+      if (config.ir_mode != Astra_640_400_30 && config.ir_mode != Astra_320_200_30 && config.ir_mode != Astra_1280_800_30)
+      {
+        config.ir_mode = Astra_640_400_30;
+      }
+    }
+  }
   if (last_config_ &&
       last_config_->ir_mode == config.ir_mode &&
       last_config_->color_mode == config.color_mode &&

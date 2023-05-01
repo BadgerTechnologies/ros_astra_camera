@@ -793,6 +793,7 @@ void OBCameraNode::reconfigureCallback(AstraConfig& config, uint32_t level) {
       last_config_->color_mode == config.color_mode &&
       last_config_->depth_mode == config.depth_mode &&
       last_config_->depth_align == config.depth_align &&
+      last_config_->depth_ir_offset_use_device_defaults == config.depth_ir_offset_use_device_defaults &&
       last_config_->depth_ir_offset_x == config.depth_ir_offset_x &&
       last_config_->depth_ir_offset_y == config.depth_ir_offset_y &&
       last_config_->rgb_preferred == config.rgb_preferred &&
@@ -870,8 +871,24 @@ void OBCameraNode::reconfigureCallback(AstraConfig& config, uint32_t level) {
     ROS_WARN("No color sensor found, depth align will be disabled");
     depth_align_ = false;
   }
-  depth_ir_x_offset_ = config.depth_ir_offset_x;
-  depth_ir_y_offset_ = config.depth_ir_offset_y;
+  if (config.depth_ir_offset_use_device_defaults) {
+    auto pid = device_->getDeviceInfo().getUsbProductId();
+    if (pid == ASTRA_MINI_PID) {
+      // Set legacy depth/IR x/y offsets. These are due to using broken default
+      // intrinsics for SXGA and need to be set to keep from invalidating
+      // existing Astra Mini calibrations.
+      depth_ir_x_offset_ = 1;
+      depth_ir_y_offset_ = 14;
+    } else {
+      // All other cameras default to no offset (depth image is co-registered
+      // with IR image).
+      depth_ir_x_offset_ = 0;
+      depth_ir_y_offset_ = 0;
+    }
+  } else {
+    depth_ir_x_offset_ = config.depth_ir_offset_x;
+    depth_ir_y_offset_ = config.depth_ir_offset_y;
+  }
   rgb_preferred_ = config.rgb_preferred;
   color_depth_synchronization_ = config.color_depth_synchronization;
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);

@@ -300,7 +300,24 @@ sensor_msgs::CameraInfo OBCameraNode::getColorCameraInfo() {
     // end if (isValidCameraParams(camera_params))
   } else {
     double color_focal_length = getFocalLength(COLOR, height);
-    return getDefaultCameraInfo(width, height, color_focal_length);
+    auto pid = device_info_.getUsbProductId();
+    if (pid == ASTRA_MINI_PID) {
+      // Astra mini focal length defaults are wrong. Scale the focal length by .91
+      color_focal_length *= .91;
+    }
+    sensor_msgs::CameraInfo camera_info;
+    camera_info = getDefaultCameraInfo(width, height, color_focal_length);
+    if (pid == ASTRA_MINI_PID) {
+      // Due to legacy reasons, the y central point needs to be adjusted up
+      // (subtracted) to compensate for the error caused by the incorrect SXGA
+      // intrinsics (because extrinsics are calibrated wrongly). This is
+      // totally bogus, but all existing Astra Mini calibrations depend on this
+      // bogusness and it is too much work to recalibrate them all.
+      double scaling = (double)width / 640;
+      camera_info.K[5] -= 15 * scaling;  // cy
+      camera_info.P[6] -= 15 * scaling;  // cy
+    }
+    return camera_info;
   }
 }
 sensor_msgs::CameraInfo OBCameraNode::getDefaultCameraInfo(int width, int height, double f) {

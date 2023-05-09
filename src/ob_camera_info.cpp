@@ -301,9 +301,10 @@ sensor_msgs::CameraInfo OBCameraNode::getColorCameraInfo() {
   } else {
     double color_focal_length = getFocalLength(COLOR, height);
     auto pid = device_info_.getUsbProductId();
-    if (pid == ASTRA_MINI_PID) {
-      // Astra mini focal length defaults are wrong. Scale the focal length by .91
-      color_focal_length *= .91;
+    if (pid == ASTRA_MINI_PID || pid == ASTRA_MINI_PRO_PID) {
+      // Astra mini/mini pro focal length defaults are wrong.
+      // Scale the focal length by .8825
+      color_focal_length *= .8825;
     }
     sensor_msgs::CameraInfo camera_info;
     camera_info = getDefaultCameraInfo(width, height, color_focal_length);

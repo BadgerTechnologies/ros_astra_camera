@@ -197,12 +197,12 @@ sensor_msgs::CameraInfo OBCameraNode::getIRCameraInfo(int width, int height, dou
       if (pid == ASTRA_MINI_PRO_PID && width == 1280 && height == 1024) {
         // The mini pro supports 1280x1024, but intrinsics are stored in 4:3
         // for VGA (640x480). Scaling isn't sufficient to fix the central point
-        // when in 1280x1024. By inspection, the 1280x920 image centers
-        // properly on the 1280x1024 image (so 1280x920 is cutting off half the
+        // when in 1280x1024. By inspection, the 1280x960 image centers
+        // properly on the 1280x1024 image (so 1280x960 is cutting off half the
         // top and bottom of the 1280x1024 image). If the mini pro is in
-        // 1280x1024 mode, add (1024-920)/2 = 52 to the cy points.
-        camera_info.K[5] += 52;  // cy
-        camera_info.P[6] += 52;  // cy
+        // 1280x1024 mode, add (1024-960)/2 = 52 to the cy points.
+        camera_info.K[5] += 32;  // cy
+        camera_info.P[6] += 32;  // cy
       }
     }
   }

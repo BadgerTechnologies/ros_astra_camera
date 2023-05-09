@@ -18,7 +18,7 @@ OBCameraParams OBCameraNode::getCameraParams() {
     return camera_params_.value();
   }
   auto pid = device_info_.getUsbProductId();
-  if (pid == ASTRA_MINI_PID) {
+  if (pid == ASTRA_MINI_PID || pid == ASTRA_MINI_PRO_PID) {
     // Camera info stored in mini's is junk, defaults are much better.
     // Return an invalid config.
     OBCameraParams params = {std::nanf("")};
@@ -125,10 +125,10 @@ double OBCameraNode::getFocalLength(const stream_index_pair& stream_index, int y
     return 0.0;
   }
   auto stream = streams_.at(stream_index);
-  // Astra mini's report bad IR focal length which will result in nan.
+  // Astra mini's/mini pro's report bad IR focal length which will result in nan.
   // Replace with the correct info from the depth stream.
   auto pid = device_info_.getUsbProductId();
-  if (stream_index == INFRA1 && pid == ASTRA_MINI_PID) {
+  if (stream_index == INFRA1 && (pid == ASTRA_MINI_PID || pid == ASTRA_MINI_PRO_PID)) {
     stream = streams_.at(DEPTH);
   }
   if (stream == nullptr) {

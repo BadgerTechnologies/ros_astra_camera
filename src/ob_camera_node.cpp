@@ -224,16 +224,19 @@ void OBCameraNode::setupVideoMode() {
       openni::VideoMode video_mode, default_video_mode;
       // Add missing modes for early Stereo S.
       // Some early firmware Stereo S devices are missing their normal depth
-      // video modes (320x200 and 640x400). Add them back if missing.
+      // video modes (320x200, 640x400 and 1280x800). Add them back if missing.
       auto pid = device_->getDeviceInfo().getUsbProductId();
-      if (stream_index == DEPTH && pid == STEREO_S_DEPTH_PID) {
+      if (pid == STEREO_S_DEPTH_PID) {
         bool is_320_200_30_missing = true;
         bool is_640_400_30_missing = true;
+        bool is_1280_800_30_missing = true;
         for (const auto& item : supported_video_modes_[stream_index]) {
           if (item.getResolutionX() == 320 && item.getResolutionY() == 200 && item.getFps() == 30.0) {
             is_320_200_30_missing = false;
           } else if (item.getResolutionX() == 640 && item.getResolutionY() == 400 && item.getFps() == 30.0) {
             is_640_400_30_missing = false;
+          } else if (item.getResolutionX() == 1280 && item.getResolutionY() == 800 && item.getFps() == 30.0) {
+            is_1280_800_30_missing = false;
           }
         }
         if (is_320_200_30_missing)
@@ -246,6 +249,14 @@ void OBCameraNode::setupVideoMode() {
         if (is_640_400_30_missing)
         {
           video_mode.setResolution(640, 400);
+          video_mode.setFps(30);
+          video_mode.setPixelFormat(format_[stream_index]);
+          supported_video_modes_[stream_index].emplace_back(video_mode);
+        }
+        // 1280x800 is not supported for depth, so skip adding it for depth
+        if (is_1280_800_30_missing && stream_index != DEPTH)
+        {
+          video_mode.setResolution(1280, 800);
           video_mode.setFps(30);
           video_mode.setPixelFormat(format_[stream_index]);
           supported_video_modes_[stream_index].emplace_back(video_mode);
@@ -353,16 +364,25 @@ void OBCameraNode::startStream(const stream_index_pair& stream_index) {
   }
   CHECK(stream_video_mode_.count(stream_index));
   auto video_mode = stream_video_mode_.at(stream_index);
-  if (stream_index == DEPTH && pid == STEREO_S_DEPTH_PID) {
-    // Stereo S: The openni layer doesn't believe that we support 320x200 or
-    // 640x400 anymore, hack it and remove the bar at the bottom.
+  if (pid == STEREO_S_DEPTH_PID) {
+    // Stereo S: The openni layer doesn't believe that we support 320x200,
+    // 640x400 or 1280x800 anymore, hack it and remove the bar at the bottom.
+    int new_height = 0;
     if (video_mode.getResolutionX() == 320 && video_mode.getResolutionY() == 200) {
-      ROS_INFO_STREAM("Stereo S depth resolution hack: 320x200 => 320x240");
-      video_mode.setResolution(320, 240);
+      new_height = 240;
     } else if (video_mode.getResolutionX() == 640 && video_mode.getResolutionY() == 400) {
-      ROS_INFO_STREAM("Stereo S depth resolution hack: 640x400 => 640x480");
-      video_mode.setResolution(480, 640);
+      new_height = 480;
+    } else if (video_mode.getResolutionX() == 1280 && video_mode.getResolutionY() == 800) {
+      new_height = 960;
     }
+    if (new_height > 0)
+    {
+      ROS_INFO_STREAM("Stereo S " << stream_name_[stream_index] << " resolution hack: "
+          << video_mode.getResolutionX() << "x" << video_mode.getResolutionY()
+          << " => " << video_mode.getResolutionX() << "x" << new_height);
+      video_mode.setResolution(video_mode.getResolutionX(), new_height);
+    }
+
   }
   CHECK(streams_.count(stream_index));
   CHECK(streams_[stream_index].get());
@@ -651,13 +671,16 @@ void OBCameraNode::onNewFrameCallback(const openni::VideoFrameRef& frame,
   CHECK(images_.count(stream_index));
   auto& image = images_.at(stream_index);
   const auto pid = device_info_.getUsbProductId();
-  if (stream_index == DEPTH && pid == STEREO_S_DEPTH_PID) {
-    // Stereo S: The openni layer doesn't believe that we support 320x200 or
-    // 640x400 anymore, remove the bar at the bottom by truncating the height.
+  if (pid == STEREO_S_DEPTH_PID) {
+    // Stereo S: The openni layer doesn't believe that we support 320x200,
+    // 640x400 or 1280x800 anymore, remove the bar at the bottom by truncating
+    // the height.
     if (image.size() == cv::Size(320, 200) && width == 320 && height == 240) {
       height = 200;
     } else if (image.size() == cv::Size(640, 400) && width == 640 && height == 480) {
       height = 400;
+    } else if (image.size() == cv::Size(1280, 800) && width == 1280 && height == 960) {
+      height = 800;
     }
   }
   if (image.size() != cv::Size(width, height)) {

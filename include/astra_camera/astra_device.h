@@ -131,6 +131,7 @@ public:
   float getBaseline () const;
   OBCameraParams getCameraParams() const;
   char* getSerialNumber();
+  char* getFirmwareVersion();
   char* getDeviceType();
   OB_DEVICE_NO getDeviceTypeNo();
   int getIRGain() const;
@@ -183,6 +184,7 @@ protected:
   OBCameraParams m_CamParams;
   char serial_number[12];
   char device_type[32];
+  char firmware_version[128];
   OB_DEVICE_NO device_type_no;
 };
 

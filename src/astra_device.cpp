@@ -88,6 +88,10 @@ AstraDevice::AstraDevice(const std::string& device_URI):
   memset(serial_number, 0, serial_number_size);
   openni_device_->getProperty(openni::OBEXTENSION_ID_SERIALNUMBER, (uint8_t*)&serial_number, &serial_number_size);
 
+  int firmware_version_size = sizeof(firmware_version);
+  memset(firmware_version, 0, firmware_version_size);
+  openni_device_->getProperty(XN_MODULE_PROPERTY_SENSOR_PLATFORM_STRING, (uint8_t*)&firmware_version, &firmware_version_size);
+
   int device_type_size = sizeof(device_type);
   memset(device_type, 0, device_type_size);
   openni_device_->getProperty(openni::OBEXTENSION_ID_DEVICETYPE, (uint8_t*)&device_type, &device_type_size);
@@ -176,6 +180,11 @@ OBCameraParams AstraDevice::getCameraParams() const
 char* AstraDevice::getSerialNumber()
 {
   return serial_number;
+}
+
+char* AstraDevice::getFirmwareVersion()
+{
+  return firmware_version;
 }
 
 char* AstraDevice::getDeviceType()

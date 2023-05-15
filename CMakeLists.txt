@@ -37,9 +37,15 @@ message(STATUS "libuvc ${libuvc_VERSION_MAJOR}.${libuvc_VERSION_MINOR}.${libuvc_
 
 generate_dynamic_reconfigure_options(cfg/Astra.cfg cfg/UVCCamera.cfg)
 
+add_message_files(
+  FILES
+  DeviceInfo.msg
+)
+
 add_service_files(
   FILES
   GetSerial.srv
+  GetDeviceInfo.srv
   GetDeviceType.srv
   GetIRGain.srv
   GetCameraInfo.srv

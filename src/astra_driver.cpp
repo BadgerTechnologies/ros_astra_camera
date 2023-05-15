@@ -258,6 +258,7 @@ void AstraDriver::advertiseROSTopics()
   }
 
   get_serial_server = nh_.advertiseService("get_serial", &AstraDriver::getSerialCb, this);
+  get_device_info_server = nh_.advertiseService("get_device_info", &AstraDriver::getDeviceInfoCb, this);
   get_device_type_server = nh_.advertiseService("get_device_type", &AstraDriver::getDeviceTypeCb, this);
   get_ir_gain_server = nh_.advertiseService("get_ir_gain", &AstraDriver::getIRGainCb, this);
   set_ir_gain_server = nh_.advertiseService("set_ir_gain", &AstraDriver::setIRGainCb, this);
@@ -278,6 +279,37 @@ void AstraDriver::advertiseROSTopics()
 bool AstraDriver::getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res)
 {
   res.serial = device_manager_->getSerial(device_->getUri());
+  return true;
+}
+
+static inline std::string decodeUsbProductId(int pid)
+{
+  switch (pid)
+  {
+    case ASTRA_MINI_PID:
+      return "Astra Mini";
+    case STEREO_S_DEPTH_PID:
+      return "Astra Stereo S";
+    case STEREO_S_U3_DEPTH_PID:
+      return "Astra Stereo S U3";
+    default:
+    {
+      std::stringstream ss;
+      ss << "Astra (Product ID 0x" << std::hex << std::setw(4) << static_cast<uint16_t>(pid) << ")";
+      return ss.str();
+    }
+  }
+}
+
+bool AstraDriver::getDeviceInfoCb(astra_camera::GetDeviceInfoRequest& req, astra_camera::GetDeviceInfoResponse& res)
+{
+  // Badger: use more descriptive name from product ID
+  res.info.name = decodeUsbProductId(device_->getUsbProductId());
+  res.info.vid = device_->getUsbVendorId();
+  res.info.pid = device_->getUsbProductId();
+  res.info.serial_number = device_->getSerialNumber();
+  res.info.firmware_version = device_->getFirmwareVersion();
+  res.success = true;
   return true;
 }
 

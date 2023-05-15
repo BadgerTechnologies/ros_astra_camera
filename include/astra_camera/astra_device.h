@@ -132,6 +132,7 @@ public:
   OBCameraParams getCameraParams() const;
   bool isCameraParamsValid();
   char* getSerialNumber();
+  char* getFirmwareVersion();
   char* getDeviceType();
   OB_DEVICE_NO getDeviceTypeNo();
   int getIRGain() const;
@@ -188,6 +189,7 @@ protected:
   bool m_ParamsValid;
   char serial_number[12];
   char device_type[32];
+  char firmware_version[128];
   OB_DEVICE_NO device_type_no;
 };
 

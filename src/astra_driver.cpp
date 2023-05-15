@@ -989,7 +989,28 @@ sensor_msgs::CameraInfoPtr AstraDriver::getColorCameraInfo(const AstraVideoMode&
   }
   else
   {
-    info = getDefaultCameraInfo(video_mode, device_->getColorFocalLength(height));
+    double color_focal_length = device_->getColorFocalLength(height);
+    auto pid = device_->getUsbProductId();
+    if (pid == ASTRA_MINI_PID) {
+      // Astra mini default focal length is wrong.
+      // Scale the focal length by .91. This number was obtained from adjusting
+      // the mask during fleet-wide tuning of fidicual free spoiler detection.
+      color_focal_length *= .91;
+    }
+    info = getDefaultCameraInfo(video_mode, color_focal_length);
+    if (pid == ASTRA_MINI_PID) {
+      // Due to legacy reasons, the y central point needs to be adjusted up
+      // (subtracted) to compensate for the error caused by the incorrect SXGA
+      // intrinsics (because extrinsics are calibrated wrongly). This is
+      // totally bogus, but all existing Astra Mini calibrations depend on this
+      // bogusness and it is too much work to recalibrate them all.
+      // Fixing this issue here allows users of RGB intriniscs (such as
+      // docking) to not need to fixup the broken intrinsics (so such code can
+      // work with newer types of cameras which are not broken).
+      double scaling = (double)width / 640.0;
+      info->K[5] -= 15 * scaling;  // cy
+      info->P[6] -= 15 * scaling;  // cy
+    }
   }
 
   // Fill in header

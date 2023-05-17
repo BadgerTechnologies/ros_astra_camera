@@ -1,6 +1,10 @@
 #ifndef ASTRA_DEVICE_TYPE_H
 #define ASTRA_DEVICE_TYPE_H
 
+constexpr static unsigned ASTRA_MINI_PID = 0x0404;
+constexpr static unsigned STEREO_S_DEPTH_PID = 0x0608;
+constexpr static unsigned STEREO_S_U3_DEPTH_PID = 0x0614;
+
 #define OB_STEREO_S "Orbbec Canglong"
 #define OB_EMBEDDED_S "Astra SL1000S_U3"
 #define OB_ASTRA_PRO "Orbbec Astra Pro"

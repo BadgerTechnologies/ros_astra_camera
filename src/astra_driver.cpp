@@ -253,7 +253,7 @@ void AstraDriver::advertiseROSTopics()
     image_transport::SubscriberStatusCallback itssc = boost::bind(&AstraDriver::depthConnectCb, this);
     ros::SubscriberStatusCallback rssc = boost::bind(&AstraDriver::depthConnectCb, this);
     pub_depth_raw_ = depth_it_.advertiseCamera("image_raw", 1, itssc, itssc, rssc, rssc);
-    pub_depth_ = depth_raw_it_.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
+//    pub_depth_ = depth_raw_it_.advertiseCamera("image", 1, itssc, itssc, rssc, rssc);
     pub_projector_info_ = projector_nh_.advertise<sensor_msgs::CameraInfo>("camera_info", 1, rssc, rssc);
   }
 

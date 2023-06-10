@@ -169,6 +169,7 @@ AstraDriver::AstraDriver(ros::NodeHandle& n, ros::NodeHandle& pnh) :
           {
               ROS_ERROR("Cannot unlock file \"%s\"!: %s", lockFileName.c_str(), strerror(errno));
           }
+          ROS_INFO_STREAM("File unlocked for camera " << device_id_);
           close(fd);
       }
   }

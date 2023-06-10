@@ -126,6 +126,10 @@ public:
 
     const AstraDeviceInfo device_info_wrapped = astra_convert(pInfo);
     device_set_.erase(device_info_wrapped);
+
+    if (pInfo->getUri() == connected_device_uri_) {
+      ros::requestShutdown();
+    }
   }
 
   boost::shared_ptr<std::vector<std::string> > getConnectedDeviceURIs()
@@ -169,8 +173,14 @@ public:
     return device_set_.size();
   }
 
+  void setConnectedDevice(const std::string& connected_device_uri)
+  {
+    connected_device_uri_ = connected_device_uri;
+  }
+
   boost::mutex device_mutex_;
   DeviceSet device_set_;
+  std::string connected_device_uri_;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -243,11 +253,15 @@ std::string AstraDeviceManager::getSerial(const std::string& Uri) const
 
 boost::shared_ptr<AstraDevice> AstraDeviceManager::getAnyDevice()
 {
-  return boost::make_shared<AstraDevice>("");
+  boost::shared_ptr<AstraDevice> connected_device = boost::make_shared<AstraDevice>("");
+  device_listener_->setConnectedDevice(connected_device->getUri());
+  return connected_device;
 }
 boost::shared_ptr<AstraDevice> AstraDeviceManager::getDevice(const std::string& device_URI)
 {
-  return boost::make_shared<AstraDevice>(device_URI);
+  boost::shared_ptr<AstraDevice> connected_device = boost::make_shared<AstraDevice>(device_URI);
+  device_listener_->setConnectedDevice(connected_device->getUri());
+  return connected_device;
 }
 
 

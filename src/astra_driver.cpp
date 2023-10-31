@@ -838,7 +838,9 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
         // Update camera info timestamp to match current frame
         depth_camera_info_->header.stamp = image->header.stamp;
 
-        pub_depth_raw_.publish(image, depth_camera_info_);
+        // Make copy to avoid modify-after-publish on next iteration
+        sensor_msgs::CameraInfoPtr info(new sensor_msgs::CameraInfo(*depth_camera_info_));
+        pub_depth_raw_.publish(image, info);
       }
 
       if (depth_subscribers_ )
@@ -848,7 +850,9 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
         // Update camera info timestamp to match current frame
         depth_camera_info_->header.stamp = image->header.stamp;
 
-        pub_depth_.publish(floating_point_image, depth_camera_info_);
+        // Make copy to avoid modify-after-publish on next iteration
+        sensor_msgs::CameraInfoPtr info(new sensor_msgs::CameraInfo(*depth_camera_info_));
+        pub_depth_.publish(floating_point_image, info);
       }
 
       // Projector "info" probably only useful for working with disparity images
@@ -856,7 +860,10 @@ void AstraDriver::newDepthFrameCallback(sensor_msgs::ImagePtr image)
       {
         // Update camera info timestamp to match current frame
         projector_camera_info_->header.stamp = image->header.stamp;
-        pub_projector_info_.publish(projector_camera_info_);
+
+        // Make copy to avoid modify-after-publish on next iteration
+        sensor_msgs::CameraInfoPtr info(new sensor_msgs::CameraInfo(*projector_camera_info_));
+        pub_projector_info_.publish(info);
       }
     }
   }

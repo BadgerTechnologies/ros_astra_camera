@@ -53,6 +53,7 @@
 #include "astra_camera/astra_device.h"
 #include "astra_camera/astra_video_mode.h"
 #include "astra_camera/GetSerial.h"
+#include "astra_camera/GetUri.h"
 #include "astra_camera/GetDeviceInfo.h"
 #include "astra_camera/GetDeviceType.h"
 #include "astra_camera/GetIRGain.h"
@@ -107,6 +108,7 @@ private:
   void depthConnectCb();
 
   bool getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res);
+  bool getUriCb(astra_camera::GetUriRequest& req, astra_camera::GetUriResponse& res);
   bool getDeviceInfoCb(astra_camera::GetDeviceInfoRequest& req, astra_camera::GetDeviceInfoResponse& res);
   bool getDeviceTypeCb(astra_camera::GetDeviceTypeRequest& req, astra_camera::GetDeviceTypeResponse& res);
   bool getIRGainCb(astra_camera::GetIRGainRequest& req, astra_camera::GetIRGainResponse& res);
@@ -150,6 +152,7 @@ private:
   /** \brief get_serial server*/
   ros::ServiceServer get_camera_info;
   ros::ServiceServer get_serial_server;
+  ros::ServiceServer get_uri_server;
   ros::ServiceServer get_device_info_server;
   ros::ServiceServer get_device_type_server;
   ros::ServiceServer get_ir_gain_server;

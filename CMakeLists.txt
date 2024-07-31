@@ -45,6 +45,7 @@ add_message_files(
 add_service_files(
   FILES
   GetSerial.srv
+  GetUri.srv
   GetDeviceInfo.srv
   GetDeviceType.srv
   GetIRGain.srv

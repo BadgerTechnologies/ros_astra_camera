@@ -259,6 +259,7 @@ void AstraDriver::advertiseROSTopics()
   }
 
   get_serial_server = nh_.advertiseService("get_serial", &AstraDriver::getSerialCb, this);
+  get_uri_server = nh_.advertiseService("get_uri", &AstraDriver::getUriCb, this);
   get_device_info_server = nh_.advertiseService("get_device_info", &AstraDriver::getDeviceInfoCb, this);
   get_device_type_server = nh_.advertiseService("get_device_type", &AstraDriver::getDeviceTypeCb, this);
   get_ir_gain_server = nh_.advertiseService("get_ir_gain", &AstraDriver::getIRGainCb, this);
@@ -280,6 +281,12 @@ void AstraDriver::advertiseROSTopics()
 bool AstraDriver::getSerialCb(astra_camera::GetSerialRequest& req, astra_camera::GetSerialResponse& res)
 {
   res.serial = device_manager_->getSerial(device_->getUri());
+  return true;
+}
+
+bool AstraDriver::getUriCb(astra_camera::GetUriRequest& req, astra_camera::GetUriResponse& res)
+{
+  res.uri = device_->getUri();
   return true;
 }
 
